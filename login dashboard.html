@@ -1028,7 +1028,7 @@
 
 <!-- ═══════════ AUDIO GLOBAL ═══════════ -->
 <audio id="bg-music" preload="auto">
-  <source src="LONOWN - AVANGARD (Slowed + Reverb).mp3" type="audio/mpeg">
+  <source src="avangard.mp3" type="audio/mpeg">
 </audio>
 <div class="music-player" aria-label="Controles de música">
   <div class="music-meta">
@@ -2613,10 +2613,11 @@
   function playMusic() {
     if (!bgMusic) return;
     bgMusic.volume = Number(musicVolume?.value || 0.16);
+    if (bgMusic.readyState === 0) bgMusic.load();
     bgMusic.play()
       .then(() => {
         musicStarted = true;
-        setMusicState('Reproduciendo · volumen bajo');
+        setMusicState('Reproduciendo · volumen ' + Math.round(bgMusic.volume * 200) + '%');
       })
       .catch(() => {
         setMusicState('Pulsa reproducir para iniciar');
@@ -2647,6 +2648,13 @@
   bgMusic?.addEventListener('ended', () => {
     musicStarted = false;
     setMusicState('Canción terminada');
+  });
+  bgMusic?.addEventListener('error', () => {
+    musicStarted = false;
+    setMusicState('No se pudo cargar el audio');
+  });
+  bgMusic?.addEventListener('playing', () => {
+    setMusicState('Reproduciendo · volumen ' + Math.round(Number(musicVolume?.value || 0.16) * 200) + '%');
   });
 
   function clampMusicPlayerPosition(x, y) {
