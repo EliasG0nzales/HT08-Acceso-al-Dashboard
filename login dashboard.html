@@ -1,0 +1,2827 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FortiGate — Filtrado Web</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  /* ── LOGIN SCREEN ── */
+  #login-screen {
+    position: fixed; inset: 0; z-index: 9999;
+    background: #070b0a;
+    display: flex;
+    font-family: 'IBM Plex Sans', sans-serif;
+    overflow: hidden;
+  }
+  #login-screen::before {
+    content: '';
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 50% 45% at 75% 48%, rgba(0,255,132,0.14) 0%, transparent 62%),
+      radial-gradient(ellipse 35% 40% at 18% 20%, rgba(0,184,95,0.13) 0%, transparent 65%);
+    pointer-events: none;
+  }
+  #login-screen::after {
+    content: '';
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(0,255,132,0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,255,132,0.035) 1px, transparent 1px);
+    background-size: 44px 44px;
+    pointer-events: none;
+    mask-image: linear-gradient(90deg, rgba(0,0,0,0.8), rgba(0,0,0,0.25));
+  }
+
+  .login-layout {
+    position: relative; z-index: 1;
+    width: 100%;
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: minmax(0, 1.18fr) minmax(420px, 0.82fr);
+  }
+
+  .login-media {
+    position: relative;
+    min-height: 100vh;
+    overflow: hidden;
+    background:
+      radial-gradient(circle at 30% 28%, rgba(0,255,132,0.22), transparent 28%),
+      linear-gradient(135deg, #101815, #050706 62%);
+  }
+  .login-media video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    filter: saturate(1.12) contrast(1.05) brightness(0.62);
+  }
+  .login-media::before {
+    content: '';
+    position: absolute; inset: 0;
+    background:
+      linear-gradient(90deg, rgba(5,7,6,0.12) 0%, rgba(5,7,6,0.42) 76%, #070b0a 100%),
+      radial-gradient(circle at 52% 38%, rgba(0,255,132,0.18), transparent 34%);
+    pointer-events: none;
+  }
+  .login-media::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(120deg, transparent 0 45%, rgba(0,255,132,0.13) 50%, transparent 55%),
+      linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px);
+    background-size: 180% 180%, 100% 7px;
+    opacity: 0.42;
+    animation: mediaSweep 8s ease-in-out infinite alternate;
+  }
+  @keyframes mediaSweep {
+    from { background-position: 0% 20%, 0 0; }
+    to { background-position: 100% 80%, 0 14px; }
+  }
+
+  .login-media-copy {
+    position: absolute;
+    left: clamp(28px, 6vw, 78px);
+    bottom: clamp(28px, 7vw, 84px);
+    max-width: 560px;
+    color: #eefdf5;
+    text-shadow: 0 8px 34px rgba(0,0,0,0.7);
+  }
+  .login-media-kicker {
+    font-size: 11px;
+    color: #00ff84;
+    font-family: 'IBM Plex Mono', monospace;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+  .login-media-title {
+    font-size: clamp(38px, 5vw, 72px);
+    line-height: 0.96;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    margin-bottom: 16px;
+  }
+  .login-media-sub {
+    color: rgba(238,253,245,0.78);
+    font-size: 14px;
+    max-width: 430px;
+    line-height: 1.65;
+  }
+
+  .login-form-panel {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: clamp(24px, 5vw, 64px);
+    background:
+      radial-gradient(circle at 50% 50%, rgba(0,255,132,0.11), transparent 46%),
+      rgba(7,11,10,0.92);
+  }
+
+  .login-box {
+    position: relative; z-index: 1;
+    width: 100%; max-width: 390px;
+    background: #141414;
+    border: 1px solid #00ff84;
+    border-radius: 10px;
+    padding: 58px 34px 34px;
+    box-shadow:
+      0 0 0 1px rgba(0,255,132,0.08),
+      0 0 48px rgba(0,255,132,0.36),
+      0 0 96px rgba(0,255,132,0.22),
+      0 28px 60px rgba(0,0,0,0.62);
+    animation: loginFadeIn 0.4s ease;
+  }
+  @keyframes loginFadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  .login-brand {
+    display: flex; align-items: center; justify-content: center; gap: 12px;
+    margin-bottom: 16px;
+  }
+  .login-brand-icon {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: #00ff84;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 22px rgba(0,255,132,0.55);
+  }
+  .login-brand-icon svg { width: 24px; height: 24px; fill: #07110c; }
+  .login-brand-name { font-size: 40px; font-weight: 700; color: #00ff84; letter-spacing: -0.03em; text-align: center; }
+  .login-brand-sub { display: none; }
+
+  .login-title { display: none; }
+  .login-sub { font-size: 18px; color: #f2f2f2; margin-bottom: 38px; text-align: center; }
+
+  .login-field { margin-bottom: 15px; }
+  .login-label {
+    position: absolute;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0,0,0,0);
+    white-space: nowrap; border: 0;
+  }
+  .login-input-wrap { position: relative; }
+  .login-input {
+    width: 100%; padding: 13px 14px 13px 24px;
+    background: #141414; border: 1px solid rgba(255,255,255,0.9);
+    border-radius: 8px; color: #f5fff9;
+    font-size: 13px; font-family: 'IBM Plex Sans', sans-serif;
+    outline: none; transition: border-color 0.18s, box-shadow 0.18s;
+  }
+  .login-input:focus {
+    border-color: #00ff84;
+    box-shadow: 0 0 0 3px rgba(0,255,132,0.14), 0 0 20px rgba(0,255,132,0.18);
+  }
+  .login-input-icon {
+    display: none;
+  }
+  .login-input::placeholder { color: rgba(255,255,255,0.42); }
+
+  .login-error {
+    display: none;
+    background: rgba(73,2,2,0.6); border: 1px solid rgba(248,81,73,0.3);
+    border-radius: 8px; padding: 10px 14px;
+    font-size: 12px; color: #f85149;
+    margin-bottom: 16px;
+    align-items: center; gap: 8px;
+    animation: shake 0.35s ease;
+  }
+  .login-error.show { display: flex; }
+  @keyframes shake {
+    0%,100%{transform:translateX(0)}
+    20%{transform:translateX(-6px)}
+    40%{transform:translateX(6px)}
+    60%{transform:translateX(-4px)}
+    80%{transform:translateX(4px)}
+  }
+
+  .login-btn {
+    width: 100%; padding: 13px;
+    background: transparent; border: 1px solid #00ff84; border-radius: 8px;
+    color: #00ff84; font-size: 13px; font-weight: 700;
+    font-family: 'IBM Plex Sans', sans-serif;
+    cursor: pointer; margin-top: 20px;
+    transition: background 0.18s, transform 0.1s, box-shadow 0.18s;
+    box-shadow: 0 0 22px rgba(0,255,132,0.08);
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .login-btn:hover { background: rgba(0,255,132,0.1); box-shadow: 0 0 26px rgba(0,255,132,0.22); }
+  .login-btn:active { transform: scale(0.98); }
+  .login-btn.loading { opacity: 0.7; pointer-events: none; }
+
+  .login-forgot {
+    display: block;
+    margin: 14px 0 36px;
+    color: rgba(255,255,255,0.56);
+    font-size: 12px;
+    text-align: center;
+    text-decoration: none;
+  }
+  .login-forgot:hover { color: #00ff84; }
+
+  .login-footer {
+    margin-top: 0; padding-top: 0; border-top: none;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    font-size: 11px; color: #6e7681;
+  }
+  .login-version, .login-secure { display: none; }
+  .login-page-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.82); }
+  .login-page-dot.active { width: 28px; background: #00ff84; box-shadow: 0 0 14px rgba(0,255,132,0.5); }
+
+  /* slide out animation */
+  #login-screen.exit {
+    animation: loginExit 0.4s ease forwards;
+  }
+  @keyframes loginExit {
+    from { opacity: 1; transform: none; }
+    to { opacity: 0; transform: translateY(-16px); }
+  }
+
+  #dashboard-wrap { display: none; }
+  #dashboard-wrap.visible { display: flex; width: 100%; height: 100vh; min-height: 0; }
+
+  /* ── LOADING SCREEN ── */
+  #loading-screen {
+    position: fixed;
+    inset: 0;
+    z-index: 9998;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: #030506;
+    overflow: hidden;
+    font-family: 'IBM Plex Sans', sans-serif;
+  }
+  #loading-screen.visible { display: flex; }
+  #loading-screen.exit { animation: loadingExit 0.5s ease forwards; }
+  @keyframes loadingExit {
+    from { opacity: 1; transform: scale(1); }
+    to { opacity: 0; transform: scale(1.02); }
+  }
+  .loading-video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: brightness(0.54) contrast(1.14) saturate(1.15);
+  }
+  .loading-overlay {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(circle at 50% 46%, rgba(171,248,255,0.18), transparent 26%),
+      radial-gradient(circle at 70% 18%, rgba(255,91,46,0.18), transparent 28%),
+      linear-gradient(180deg, rgba(3,5,6,0.28), rgba(3,5,6,0.76));
+    pointer-events: none;
+  }
+  .loading-content {
+    position: relative;
+    z-index: 1;
+    width: min(92vw, 520px);
+    height: 430px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .loading-title {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 44px;
+    text-align: center;
+    color: #abf8ff;
+    font-size: 15px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 600;
+    letter-spacing: 0.32em;
+    text-shadow: 0 0 18px rgba(171,248,255,0.82), 0 0 42px rgba(56,156,166,0.6);
+  }
+  .loading-progress {
+    position: absolute;
+    left: 50%;
+    bottom: 18px;
+    width: min(280px, 72vw);
+    height: 4px;
+    transform: translateX(-50%);
+    border-radius: 999px;
+    background: rgba(171,248,255,0.18);
+    overflow: hidden;
+    box-shadow: 0 0 18px rgba(171,248,255,0.16);
+  }
+  .loading-progress::before {
+    content: '';
+    display: block;
+    height: 100%;
+    width: 100%;
+    transform-origin: left center;
+    transform: scaleX(0);
+    background: linear-gradient(90deg, #389ca6, #abf8ff);
+    animation: loadingBar 60s linear forwards;
+  }
+  @keyframes loadingBar {
+    to { transform: scaleX(1); }
+  }
+  .socket {
+    width: 200px;
+    height: 200px;
+    position: absolute;
+    left: 50%;
+    margin-left: -100px;
+    top: 50%;
+    margin-top: -118px;
+    filter: drop-shadow(0 0 16px rgba(171,248,255,0.58)) drop-shadow(0 0 42px rgba(56,156,166,0.36));
+  }
+  .hex-brick {
+    background: #abf8ff;
+    width: 30px;
+    height: 17px;
+    position: absolute;
+    top: 5px;
+    animation-name: loadingFade;
+    animation-duration: 2s;
+    animation-iteration-count: infinite;
+  }
+  .h2 { transform: rotate(60deg); }
+  .h3 { transform: rotate(-60deg); }
+  .gel {
+    height: 30px;
+    width: 30px;
+    transition: all .3s;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+  }
+  .center-gel {
+    margin-left: -15px;
+    margin-top: -15px;
+    animation-name: loadingPulse;
+    animation-duration: 2s;
+    animation-iteration-count: infinite;
+  }
+  .c1 { margin-left: -47px; margin-top: -15px; }
+  .c2 { margin-left: -31px; margin-top: -43px; }
+  .c3 { margin-left: 1px; margin-top: -43px; }
+  .c4 { margin-left: 17px; margin-top: -15px; }
+  .c5 { margin-left: -31px; margin-top: 13px; }
+  .c6 { margin-left: 1px; margin-top: 13px; }
+  .c7 { margin-left: -63px; margin-top: -43px; }
+  .c8 { margin-left: 33px; margin-top: -43px; }
+  .c9 { margin-left: -15px; margin-top: 41px; }
+  .c10 { margin-left: -63px; margin-top: 13px; }
+  .c11 { margin-left: 33px; margin-top: 13px; }
+  .c12 { margin-left: -15px; margin-top: -71px; }
+  .c13 { margin-left: -47px; margin-top: -71px; }
+  .c14 { margin-left: 17px; margin-top: -71px; }
+  .c15 { margin-left: -47px; margin-top: 41px; }
+  .c16 { margin-left: 17px; margin-top: 41px; }
+  .c17 { margin-left: -79px; margin-top: -15px; }
+  .c18 { margin-left: 49px; margin-top: -15px; }
+  .c19 { margin-left: -63px; margin-top: -99px; }
+  .c20 { margin-left: 33px; margin-top: -99px; }
+  .c21 { margin-left: 1px; margin-top: -99px; }
+  .c22 { margin-left: -31px; margin-top: -99px; }
+  .c23 { margin-left: -63px; margin-top: 69px; }
+  .c24 { margin-left: 33px; margin-top: 69px; }
+  .c25 { margin-left: 1px; margin-top: 69px; }
+  .c26 { margin-left: -31px; margin-top: 69px; }
+  .c28 { margin-left: -95px; margin-top: -43px; }
+  .c29 { margin-left: -95px; margin-top: 13px; }
+  .c30 { margin-left: 49px; margin-top: 41px; }
+  .c31 { margin-left: -79px; margin-top: -71px; }
+  .c32 { margin-left: -111px; margin-top: -15px; }
+  .c33 { margin-left: 65px; margin-top: -43px; }
+  .c34 { margin-left: 65px; margin-top: 13px; }
+  .c35 { margin-left: -79px; margin-top: 41px; }
+  .c36 { margin-left: 49px; margin-top: -71px; }
+  .c37 { margin-left: 81px; margin-top: -15px; }
+  .r1 {
+    animation-name: loadingPulse;
+    animation-duration: 2s;
+    animation-iteration-count: infinite;
+    animation-delay: .2s;
+  }
+  .r2 {
+    animation-name: loadingPulse;
+    animation-duration: 2s;
+    animation-iteration-count: infinite;
+    animation-delay: .4s;
+  }
+  .r3 {
+    animation-name: loadingPulse;
+    animation-duration: 2s;
+    animation-iteration-count: infinite;
+    animation-delay: .6s;
+  }
+  .r1 > .hex-brick {
+    animation-name: loadingFade;
+    animation-duration: 2s;
+    animation-iteration-count: infinite;
+    animation-delay: .2s;
+  }
+  .r2 > .hex-brick {
+    animation-name: loadingFade;
+    animation-duration: 2s;
+    animation-iteration-count: infinite;
+    animation-delay: .4s;
+  }
+  .r3 > .hex-brick {
+    animation-name: loadingFade;
+    animation-duration: 2s;
+    animation-iteration-count: infinite;
+    animation-delay: .6s;
+  }
+  @keyframes loadingPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(0.01); }
+  }
+  @keyframes loadingFade {
+    0%, 100% { background: #abf8ff; }
+    50% { background: #389ca6; }
+  }
+
+  @media (max-width: 920px) {
+    .login-layout { grid-template-columns: 1fr; }
+    .login-media {
+      position: absolute;
+      inset: 0;
+      min-height: 100vh;
+    }
+    .login-media::before { background: rgba(5,7,6,0.66); }
+    .login-media-copy { display: none; }
+    .login-form-panel {
+      position: relative;
+      min-height: 100vh;
+      background: rgba(7,11,10,0.7);
+    }
+  }
+  @media (max-width: 520px) {
+    .login-form-panel { padding: 20px; }
+    .login-box {
+      padding: 44px 24px 28px;
+      max-width: 100%;
+    }
+    .login-brand-name { font-size: 34px; }
+  }
+</style>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #070b0a;
+    --bg2: #141414;
+    --bg3: #101815;
+    --bg4: #1a211e;
+    --border: rgba(0,255,132,0.16);
+    --border2: rgba(0,255,132,0.28);
+    --text: #f2fff8;
+    --text2: #a8b9b0;
+    --text3: #6f8379;
+    --accent: #00ff84;
+    --accent2: #35ffa0;
+    --green: #00ff84;
+    --green2: #06351f;
+    --red: #f85149;
+    --red2: #490202;
+    --amber: #d29922;
+    --amber2: #341a00;
+    --purple: #a371f7;
+    --blue-glow: rgba(0,255,132,0.16);
+    --font: 'IBM Plex Sans', sans-serif;
+    --mono: 'IBM Plex Mono', monospace;
+    --sidebar-w: 220px;
+    --header-h: 56px;
+    --radius: 8px;
+    --radius-lg: 12px;
+    --trans: 0.18s ease;
+  }
+
+  body {
+    font-family: var(--font);
+    background:
+      radial-gradient(circle at 22% 18%, rgba(0,255,132,0.09), transparent 32%),
+      radial-gradient(circle at 78% 36%, rgba(0,255,132,0.06), transparent 34%),
+      var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    overflow: hidden;
+  }
+
+  /* ── SIDEBAR ── */
+  #sidebar { width: var(--sidebar-w); min-width: var(--sidebar-w); height: 100vh; background: rgba(20,20,20,0.96); border-right: 1px solid var(--border); box-shadow: 12px 0 36px rgba(0,0,0,0.28); display: flex; flex-direction: column; position: fixed; left: 0; top: 0; z-index: 100; transition: width var(--trans); overflow: hidden; }
+  #sidebar.collapsed { width: 56px; min-width: 56px; }
+  .sidebar-logo { height: var(--header-h); display: flex; align-items: center; padding: 0 16px; border-bottom: 1px solid var(--border); gap: 10px; white-space: nowrap; }
+  .logo-icon { width: 28px; height: 28px; flex-shrink: 0; background: var(--accent); border-radius: 6px; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 18px rgba(0,255,132,0.45); }
+  .logo-icon svg { width: 16px; height: 16px; fill: #07110c; }
+  .logo-text { font-size: 14px; font-weight: 600; letter-spacing: -0.01em; color: var(--accent); opacity: 1; transition: opacity var(--trans); }
+  .logo-sub { font-size: 10px; color: var(--text3); letter-spacing: 0.04em; }
+  #sidebar.collapsed .logo-text, #sidebar.collapsed .logo-sub, #sidebar.collapsed .nav-label, #sidebar.collapsed .nav-section-label { opacity: 0; pointer-events: none; }
+  .sidebar-body { flex: 1; overflow-y: auto; padding: 12px 8px; }
+  .sidebar-body::-webkit-scrollbar { width: 4px; }
+  .sidebar-body::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+  .nav-section-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; padding: 10px 8px 4px; white-space: nowrap; transition: opacity var(--trans); }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: var(--radius); cursor: pointer; white-space: nowrap; transition: background var(--trans), color var(--trans); color: var(--text2); font-size: 13px; position: relative; margin-bottom: 2px; }
+  .nav-item:hover { background: var(--bg3); color: var(--text); }
+  .nav-item.active { background: rgba(0,255,132,0.12); color: var(--accent2); box-shadow: inset 0 0 18px rgba(0,255,132,0.04); }
+  .nav-item.active::before { content: ''; position: absolute; left: 0; top: 20%; bottom: 20%; width: 3px; background: var(--accent2); border-radius: 0 2px 2px 0; }
+  .nav-icon { width: 18px; height: 18px; flex-shrink: 0; }
+  .nav-label { transition: opacity var(--trans); }
+  .nav-badge { margin-left: auto; font-size: 10px; font-family: var(--mono); background: var(--red); color: #fff; padding: 1px 6px; border-radius: 20px; flex-shrink: 0; }
+  .nav-badge.amber { background: var(--amber); }
+  .nav-badge.green { background: var(--green); color: #0d1117; }
+  #sidebar.collapsed .nav-badge { display: none; }
+  .sidebar-footer { padding: 12px 8px; border-top: 1px solid var(--border); }
+
+  /* ── MAIN ── */
+  #main { margin-left: var(--sidebar-w); flex: 1; display: flex; flex-direction: column; height: 100vh; min-height: 0; transition: margin-left var(--trans); overflow: hidden; }
+  #sidebar.collapsed ~ #main { margin-left: 56px; }
+
+  /* ── TOPBAR ── */
+  #topbar { height: var(--header-h); background: rgba(20,20,20,0.96); border-bottom: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0,0,0,0.24); display: flex; align-items: center; padding: 0 24px; gap: 16px; position: sticky; top: 0; z-index: 50; }
+  #toggle-btn { background: none; border: none; cursor: pointer; color: var(--text2); padding: 6px; border-radius: var(--radius); transition: background var(--trans); }
+  #toggle-btn:hover { background: var(--bg3); color: var(--text); }
+  #toggle-btn svg { width: 18px; height: 18px; display: block; }
+  .topbar-title { font-size: 14px; font-weight: 500; flex: 1; }
+  .topbar-status { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text2); }
+  .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+  .topbar-btn { background: none; border: 1px solid var(--border); color: var(--text2); padding: 6px 12px; border-radius: var(--radius); font-size: 12px; font-family: var(--font); cursor: pointer; transition: background var(--trans), color var(--trans); display: flex; align-items: center; gap: 6px; }
+  .topbar-btn:hover { background: var(--bg3); color: var(--text); }
+  .topbar-btn svg { width: 14px; height: 14px; }
+  .avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; cursor: pointer; }
+  .topbar-search { position: relative; width: min(280px, 24vw); min-width: 190px; }
+  .topbar-search svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; color: var(--text3); pointer-events: none; }
+  .topbar-search input { width: 100%; height: 32px; padding: 0 10px 0 32px; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); font-size: 12px; font-family: var(--font); outline: none; transition: border-color var(--trans), box-shadow var(--trans); }
+  .topbar-search input:focus { border-color: var(--accent2); box-shadow: 0 0 0 3px rgba(0,255,132,0.12), 0 0 18px rgba(0,255,132,0.12); }
+  .topbar-clock { font-family: var(--mono); font-size: 11px; color: var(--text3); white-space: nowrap; }
+
+  /* ── CONTENT ── */
+  #content { flex: 1; min-height: 0; height: calc(100vh - var(--header-h)); overflow-y: auto; overflow-x: hidden; padding: 24px; overscroll-behavior: contain; scroll-behavior: smooth; }
+  #content::-webkit-scrollbar { width: 6px; }
+  #content::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+  .page { display: none; animation: fadeIn 0.2s ease; }
+  .page.active { display: block; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:none} }
+  .page-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+  .page-header h1 { font-size: 20px; font-weight: 600; letter-spacing: -0.02em; }
+  .page-header p { font-size: 12px; color: var(--text2); margin-top: 3px; }
+
+  /* ── CARDS ── */
+  .card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 18px 20px; }
+  .card-title { font-size: 12px; font-weight: 500; color: var(--text2); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+  .card-title svg { width: 14px; height: 14px; }
+
+  /* ── METRICS ── */
+  .metrics-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 20px; }
+  .metric { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px 18px; position: relative; overflow: hidden; }
+  .metric::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
+  .metric.m-blue::after { background: var(--accent2); }
+  .metric.m-red::after { background: var(--red); }
+  .metric.m-amber::after { background: var(--amber); }
+  .metric.m-green::after { background: var(--green); }
+  .metric.m-purple::after { background: var(--purple); }
+  .metric-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+  .metric-val { font-size: 26px; font-weight: 600; font-family: var(--mono); line-height: 1; }
+  .metric-delta { font-size: 11px; color: var(--text3); margin-top: 6px; display: flex; align-items: center; gap: 4px; }
+  .delta-up { color: var(--green); }
+  .delta-dn { color: var(--red); }
+  .metric.flip-kpi {
+    min-height: 132px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    overflow: visible;
+    perspective: 900px;
+  }
+  .metric.flip-kpi::after { display: none; }
+  .kpi-flip-content {
+    position: relative;
+    width: 100%;
+    height: 132px;
+    transform-style: preserve-3d;
+    transition: transform 320ms ease;
+    border-radius: var(--radius-lg);
+    box-shadow: 0 0 18px rgba(0,255,132,0.09), 0 16px 32px rgba(0,0,0,0.38);
+  }
+  .metric.flip-kpi:hover .kpi-flip-content { transform: rotateY(180deg); }
+  .kpi-face {
+    position: absolute;
+    inset: 0;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    background: #141414;
+    border: 1px solid var(--border);
+  }
+  .kpi-front {
+    color: var(--text);
+  }
+  .kpi-back {
+    transform: rotateY(180deg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .kpi-back::before {
+    content: '';
+    position: absolute;
+    width: 80px;
+    height: 180%;
+    background: linear-gradient(90deg, transparent, rgba(0,255,132,0.15), #00ff84, rgba(0,255,132,0.15), transparent);
+    animation: kpiBorderSpin 5s linear infinite;
+  }
+  .kpi-back-content {
+    position: absolute;
+    inset: 1px;
+    background: #141414;
+    border-radius: calc(var(--radius-lg) - 1px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 8px;
+    padding: 18px;
+  }
+  .kpi-back-title { color: var(--accent); font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+  .kpi-back-copy { color: var(--text2); font-size: 12px; line-height: 1.45; }
+  .kpi-back-code { color: var(--text3); font-family: var(--mono); font-size: 10px; }
+  @keyframes kpiBorderSpin {
+    from { transform: rotateZ(0deg); }
+    to { transform: rotateZ(360deg); }
+  }
+  .kpi-orbs {
+    position: absolute;
+    inset: 0;
+    opacity: 0.8;
+  }
+  .kpi-orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(16px);
+    animation: kpiFloat 2600ms infinite linear;
+  }
+  .kpi-orb.one { width: 92px; height: 92px; left: -20px; top: -18px; background: rgba(0,255,132,0.28); }
+  .kpi-orb.two { width: 132px; height: 132px; right: -48px; bottom: -54px; background: rgba(53,255,160,0.18); animation-delay: -800ms; }
+  .kpi-orb.three { width: 36px; height: 36px; right: 34px; top: 22px; background: rgba(242,255,248,0.16); animation-delay: -1800ms; }
+  @keyframes kpiFloat {
+    0%,100% { transform: translateY(0); }
+    50% { transform: translateY(10px); }
+  }
+  .kpi-front-content {
+    position: relative;
+    z-index: 1;
+    height: 100%;
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .kpi-chip {
+    width: fit-content;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: rgba(0,0,0,0.38);
+    border: 1px solid rgba(0,255,132,0.18);
+    color: var(--accent);
+    font-family: var(--mono);
+    font-size: 10px;
+    backdrop-filter: blur(3px);
+  }
+  .kpi-description {
+    width: 100%;
+    padding: 10px;
+    background: rgba(0,0,0,0.56);
+    backdrop-filter: blur(5px);
+    border-radius: var(--radius);
+    box-shadow: 0 0 18px rgba(0,0,0,0.36);
+  }
+  .kpi-title-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .kpi-title-row .metric-label { margin-bottom: 0; }
+  .kpi-description .metric-val { margin-top: 6px; }
+
+  /* ── GRIDS ── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 16px; }
+  .grid-2-1 { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .span2 { grid-column: span 2; }
+
+  /* ── TABLE ── */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  thead th { text-align: left; padding: 8px 12px; font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--border); font-weight: 500; }
+  tbody tr { border-bottom: 1px solid rgba(48,54,61,0.5); transition: background var(--trans); }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--bg3); }
+  td { padding: 10px 12px; color: var(--text2); vertical-align: middle; }
+  td:first-child { color: var(--text); font-weight: 500; }
+
+  /* ── BADGES ── */
+  .badge { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 500; padding: 2px 8px; border-radius: 20px; font-family: var(--mono); }
+  .badge-block { background: var(--red2); color: var(--red); border: 1px solid rgba(248,81,73,0.3); }
+  .badge-allow { background: var(--green2); color: var(--green); border: 1px solid rgba(0,255,132,0.3); }
+  .badge-monitor { background: rgba(0,255,132,0.12); color: var(--accent2); border: 1px solid rgba(0,255,132,0.28); }
+  .badge-warn { background: var(--amber2); color: var(--amber); border: 1px solid rgba(210,153,34,0.3); }
+  .badge-info { background: rgba(163,113,247,0.12); color: var(--purple); border: 1px solid rgba(163,113,247,0.3); }
+
+  /* ── BAR ROWS ── */
+  .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .bar-row:last-child { margin-bottom: 0; }
+  .bar-name { font-size: 12px; color: var(--text2); width: 130px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bar-track { flex: 1; height: 5px; background: var(--bg3); border-radius: 3px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 3px; transition: width 0.6s ease; }
+  .bar-pct { font-size: 11px; color: var(--text3); font-family: var(--mono); width: 36px; text-align: right; }
+
+  /* ── EVENTS ── */
+  .event { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid rgba(48,54,61,0.5); }
+  .event:last-child { border-bottom: none; }
+  .ev-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+  .ev-red { background: var(--red); box-shadow: 0 0 5px rgba(248,81,73,0.5); }
+  .ev-amber { background: var(--amber); box-shadow: 0 0 5px rgba(210,153,34,0.5); }
+  .ev-blue { background: var(--accent2); }
+  .ev-green { background: var(--green); }
+  .ev-purple { background: var(--purple); }
+  .ev-main { font-size: 12px; color: var(--text); }
+  .ev-meta { font-size: 11px; color: var(--text3); margin-top: 2px; font-family: var(--mono); }
+  .ev-time { font-size: 10px; color: var(--text3); margin-left: auto; flex-shrink: 0; font-family: var(--mono); }
+
+  /* ── QUOTA BARS ── */
+  .quota-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .quota-label { font-size: 11px; color: var(--text2); width: 90px; flex-shrink: 0; }
+  .quota-track { flex: 1; height: 6px; background: var(--bg3); border-radius: 3px; overflow: hidden; }
+  .quota-fill { height: 100%; border-radius: 3px; }
+  .quota-val { font-size: 10px; color: var(--text3); font-family: var(--mono); width: 50px; text-align: right; }
+
+  /* ── STAT ROW ── */
+  .stat-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid rgba(48,54,61,0.4); font-size: 12px; }
+  .stat-row:last-child { border-bottom: none; }
+  .stat-k { color: var(--text2); }
+  .stat-v { color: var(--text); font-family: var(--mono); font-size: 11px; }
+
+  /* ── SWITCH ── */
+  .toggle-wrap { display: flex; align-items: center; gap: 10px; }
+  .switch { position: relative; width: 34px; height: 18px; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider { position: absolute; inset: 0; background: var(--bg3); border-radius: 20px; cursor: pointer; border: 1px solid var(--border2); transition: background var(--trans); }
+  .slider::before { content: ''; position: absolute; width: 12px; height: 12px; left: 2px; bottom: 2px; background: var(--text3); border-radius: 50%; transition: transform var(--trans), background var(--trans); }
+  input:checked + .slider { background: rgba(0,255,132,0.28); border-color: var(--accent); }
+  input:checked + .slider::before { transform: translateX(16px); background: var(--accent2); }
+  .toggle-label { font-size: 12px; color: var(--text2); }
+
+  /* ── FORMS ── */
+  .form-group { margin-bottom: 16px; }
+  .form-label { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; display: block; }
+  .form-input, .form-select { width: 100%; padding: 8px 12px; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); font-size: 12px; font-family: var(--font); transition: border-color var(--trans); outline: none; }
+  .form-input:focus, .form-select:focus { border-color: var(--accent); }
+  .form-select option { background: var(--bg3); }
+
+  /* ── BUTTONS ── */
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: var(--radius); font-size: 12px; font-family: var(--font); cursor: pointer; transition: background var(--trans), opacity var(--trans); border: none; font-weight: 500; }
+  .btn-primary { background: var(--accent); color: #07110c; box-shadow: 0 0 18px rgba(0,255,132,0.18); }
+  .btn-primary:hover { background: var(--accent2); }
+  .btn-ghost { background: transparent; color: var(--text2); border: 1px solid var(--border); }
+  .btn-ghost:hover { background: var(--bg3); color: var(--text); }
+  .btn-danger { background: rgba(248,81,73,0.12); color: var(--red); border: 1px solid rgba(248,81,73,0.3); }
+  .btn-danger:hover { background: rgba(248,81,73,0.2); }
+  .btn-success { background: rgba(0,255,132,0.12); color: var(--green); border: 1px solid rgba(0,255,132,0.3); }
+  .btn-success:hover { background: rgba(0,255,132,0.2); }
+  .btn svg { width: 13px; height: 13px; }
+
+  /* ── FILTER ROW ── */
+  .filter-row { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .filter-row .form-input, .filter-row .form-select { width: auto; flex: 1; min-width: 120px; }
+
+  /* ── INFO BOX ── */
+  .info-box { background: rgba(0,255,132,0.055); border: 1px solid rgba(0,255,132,0.2); border-radius: var(--radius-lg); padding: 16px 20px; margin-bottom: 16px; }
+  .info-box-title { font-size: 13px; font-weight: 600; color: var(--accent2); margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+  .info-box p { font-size: 12px; color: var(--text2); line-height: 1.7; }
+  .ops-strip { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-bottom: 20px; }
+  .ops-item { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; min-width: 0; }
+  .ops-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+  .ops-value { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; color: var(--text); font-size: 15px; font-weight: 600; }
+  .ops-note { font-family: var(--mono); font-size: 10px; color: var(--text3); font-weight: 400; white-space: nowrap; }
+  .table-tools { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+  .table-count { font-family: var(--mono); font-size: 11px; color: var(--text3); }
+  .toast-stack { position: fixed; right: 18px; bottom: 18px; z-index: 12000; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+  .toast { min-width: 260px; max-width: 360px; background: rgba(20,20,20,0.96); border: 1px solid rgba(0,255,132,0.32); border-left: 3px solid var(--accent2); border-radius: var(--radius); padding: 11px 13px; color: var(--text); font-size: 12px; box-shadow: 0 14px 36px rgba(0,0,0,0.45), 0 0 28px rgba(0,255,132,0.08); animation: toastIn 0.18s ease; }
+  .toast.success { border-color: rgba(0,255,132,0.35); border-left-color: var(--green); }
+  .toast.warn { border-color: rgba(210,153,34,0.35); border-left-color: var(--amber); }
+  .toast-title { font-weight: 600; margin-bottom: 2px; }
+  .toast-body { color: var(--text2); line-height: 1.45; }
+  @keyframes toastIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  .module-insight {
+    position: relative;
+    margin-bottom: 20px;
+    padding: 16px 18px;
+    background:
+      linear-gradient(135deg, rgba(0,255,132,0.055), rgba(20,20,20,0.96) 42%),
+      #141414;
+    border: 1px solid rgba(0,255,132,0.34);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 0 26px rgba(0,255,132,0.08), 0 14px 36px rgba(0,0,0,0.32);
+    overflow: hidden;
+  }
+  .module-insight::before {
+    content: '';
+    position: absolute;
+    left: -20%;
+    right: -20%;
+    top: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #00ff84, transparent);
+    opacity: 0.85;
+  }
+  .module-insight-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+  .module-insight-title {
+    color: var(--accent);
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .module-insight-chip {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text3);
+    border: 1px solid rgba(0,255,132,0.18);
+    border-radius: 999px;
+    padding: 3px 8px;
+    background: rgba(0,0,0,0.24);
+    white-space: nowrap;
+  }
+  .module-insight-body {
+    color: var(--text2);
+    font-size: 12px;
+    line-height: 1.65;
+    max-width: 980px;
+  }
+  .module-insight-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0,1fr));
+    gap: 10px;
+    margin-top: 14px;
+  }
+  .module-action {
+    background: rgba(0,0,0,0.22);
+    border: 1px solid rgba(0,255,132,0.12);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    min-width: 0;
+  }
+  .module-action-k {
+    color: var(--text3);
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 5px;
+  }
+  .module-action-v {
+    color: var(--text);
+    font-size: 12px;
+    line-height: 1.45;
+  }
+  @media (max-width: 760px) {
+    .module-insight-actions { grid-template-columns: 1fr; }
+    .module-insight-head { align-items: flex-start; flex-direction: column; }
+  }
+
+  /* ── USER CARD ── */
+  .user-card { display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--bg3); border-radius: var(--radius); margin-bottom: 8px; cursor: pointer; transition: background var(--trans); border: 1px solid transparent; }
+  .user-card:hover, .user-card.selected { background: rgba(0,255,132,0.09); border-color: rgba(0,255,132,0.26); }
+  .user-avatar { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; flex-shrink: 0; }
+  .ua-blue { background: rgba(0,255,132,0.18); color: var(--accent2); }
+  .ua-green { background: rgba(0,255,132,0.18); color: var(--green); }
+  .ua-amber { background: rgba(210,153,34,0.2); color: var(--amber); }
+  .ua-red { background: rgba(248,81,73,0.2); color: var(--red); }
+  .ua-purple { background: rgba(163,113,247,0.2); color: var(--purple); }
+  .user-info { flex: 1; }
+  .user-name { font-size: 13px; font-weight: 500; color: var(--text); }
+  .user-meta { font-size: 11px; color: var(--text3); font-family: var(--mono); }
+
+  /* ── ALERT CARD ── */
+  .alert-card { display: flex; align-items: flex-start; gap: 14px; }
+  .alert-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+  /* ── CONCEPT CARD ── */
+  .concept-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px; }
+  .concept-icon { font-size: 28px; margin-bottom: 12px; }
+  .concept-title { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+  .concept-body { font-size: 12px; color: var(--text2); line-height: 1.7; }
+
+  /* ── TOOLTIP ── */
+  [data-tip] { position: relative; }
+  [data-tip]::after { content: attr(data-tip); position: absolute; left: 50%; bottom: 120%; transform: translateX(-50%); white-space: nowrap; background: var(--bg4); color: var(--text); font-size: 11px; padding: 4px 8px; border-radius: 4px; pointer-events: none; opacity: 0; transition: opacity 0.15s; border: 1px solid var(--border); z-index: 200; }
+  [data-tip]:hover::after { opacity: 1; }
+
+  /* ── GLOBAL AUDIO ── */
+  .music-player {
+    position: fixed;
+    right: 18px;
+    top: 18px;
+    z-index: 13000;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    max-width: min(430px, calc(100vw - 36px));
+    padding: 9px 10px;
+    background: rgba(20,20,20,0.86);
+    border: 1px solid rgba(0,255,132,0.28);
+    border-radius: 999px;
+    box-shadow: 0 12px 34px rgba(0,0,0,0.46), 0 0 26px rgba(0,255,132,0.1);
+    backdrop-filter: blur(8px);
+    cursor: grab;
+    user-select: none;
+    touch-action: none;
+    transition: box-shadow var(--trans), border-color var(--trans);
+  }
+  .music-player.dragging {
+    border-color: rgba(0,255,132,0.55);
+    box-shadow: 0 16px 42px rgba(0,0,0,0.56), 0 0 32px rgba(0,255,132,0.18);
+    cursor: grabbing;
+  }
+  .music-meta {
+    min-width: 0;
+    max-width: 210px;
+  }
+  .music-title {
+    color: var(--accent);
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .music-state {
+    margin-top: 2px;
+    color: rgba(242,255,248,0.62);
+    font-size: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .music-btn {
+    width: 30px;
+    height: 30px;
+    border: 1px solid rgba(0,255,132,0.28);
+    border-radius: 50%;
+    background: rgba(0,255,132,0.08);
+    color: var(--accent);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background var(--trans), transform 0.1s, box-shadow var(--trans);
+    flex-shrink: 0;
+  }
+  .music-btn, .music-volume { cursor: pointer; touch-action: auto; }
+  .music-btn:hover {
+    background: rgba(0,255,132,0.16);
+    box-shadow: 0 0 18px rgba(0,255,132,0.18);
+  }
+  .music-btn:active { transform: scale(0.96); }
+  .music-btn svg { width: 14px; height: 14px; }
+  .music-volume {
+    width: 78px;
+    accent-color: #00ff84;
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 900px) {
+    .metrics-row, .grid-4 { grid-template-columns: repeat(2,1fr); }
+    .ops-strip { grid-template-columns: repeat(2,1fr); }
+    .topbar-search { display: none; }
+    .grid-2, .grid-2-1 { grid-template-columns: 1fr; }
+    .grid-3 { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 600px) {
+    .music-player { left: 12px; right: 12px; top: 12px; justify-content: center; border-radius: var(--radius-lg); }
+    .music-meta { display: none; }
+    .music-volume { width: 68px; }
+    #sidebar { width: 56px; }
+    #main { margin-left: 56px; }
+    .metrics-row, .grid-4 { grid-template-columns: 1fr 1fr; }
+    .ops-strip { grid-template-columns: 1fr; }
+    .topbar-clock { display: none; }
+    .grid-3 { grid-template-columns: 1fr; }
+  }
+  html { scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════ AUDIO GLOBAL ═══════════ -->
+<audio id="bg-music" preload="auto">
+  <source src="LONOWN - AVANGARD (Slowed + Reverb).mp3" type="audio/mpeg">
+</audio>
+<div class="music-player" aria-label="Controles de música">
+  <div class="music-meta">
+    <div class="music-title">LONOWN - AVANGARD</div>
+    <div class="music-state" id="music-state">Listo · volumen bajo</div>
+  </div>
+  <button class="music-btn" id="music-play" type="button" title="Reproducir">
+    <svg fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+  </button>
+  <button class="music-btn" id="music-pause" type="button" title="Pausar">
+    <svg fill="currentColor" viewBox="0 0 24 24"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>
+  </button>
+  <button class="music-btn" id="music-stop" type="button" title="Detener">
+    <svg fill="currentColor" viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>
+  </button>
+  <input class="music-volume" id="music-volume" type="range" min="0" max="0.5" step="0.01" value="0.16" title="Volumen">
+</div>
+
+<!-- ═══════════ LOGIN ═══════════ -->
+<div id="login-screen">
+  <div class="login-layout">
+    <section class="login-media" aria-label="Video de fondo">
+      <video autoplay muted loop playsinline poster="">
+        <source src="rayquaza-flying-in-the-sky-pokemon-moewalls-com.mp4" type="video/mp4">
+      </video>
+      <div class="login-media-copy">
+        <div class="login-media-kicker">FortiGate Web Filter</div>
+        <div class="login-media-title">Control visual para tu red.</div>
+        <div class="login-media-sub">Monitorea amenazas, políticas y tráfico web desde un panel oscuro con acceso seguro.</div>
+      </div>
+    </section>
+
+    <section class="login-form-panel">
+      <div class="login-box">
+        <div class="login-brand">
+          <div>
+            <div class="login-brand-name">FortiGate</div>
+            <div class="login-brand-sub">Web Filter — Panel de Control</div>
+          </div>
+        </div>
+
+        <div class="login-title">Iniciar sesión</div>
+        <div class="login-sub">Welcome Back, Elias</div>
+
+        <div class="login-error" id="login-error">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span id="login-error-msg">ID o contraseña incorrectos.</span>
+        </div>
+
+        <div class="login-field">
+          <label class="login-label" for="login-id">ID de usuario</label>
+          <div class="login-input-wrap">
+            <svg class="login-input-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <input class="login-input" id="login-id" type="text" placeholder="Email Address" autocomplete="username">
+          </div>
+        </div>
+
+        <div class="login-field">
+          <label class="login-label" for="login-pass">Contraseña</label>
+          <div class="login-input-wrap">
+            <svg class="login-input-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <input class="login-input" id="login-pass" type="password" placeholder="Password" autocomplete="current-password">
+          </div>
+        </div>
+
+        <button class="login-btn" id="login-btn" onclick="handleLogin()">Login</button>
+        <a class="login-forgot" href="#">Forgot password?</a>
+
+        <div class="login-footer" aria-hidden="true">
+          <span class="login-page-dot active"></span>
+          <span class="login-page-dot"></span>
+          <span class="login-page-dot"></span>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<!-- ═══════════ CARGA ═══════════ -->
+<div id="loading-screen" aria-live="polite" aria-label="Cargando dashboard">
+  <video class="loading-video" autoplay muted loop playsinline>
+    <source src="meteorite-falling-moewalls-com.mp4" type="video/mp4">
+  </video>
+  <div class="loading-overlay"></div>
+  <div class="loading-content">
+    <div class="socket" aria-hidden="true">
+      <div class="gel center-gel"><div class="hex-brick h1"></div><div class="hex-brick h2"></div><div class="hex-brick h3"></div></div>
+      <div class="gel c1 r1"><div class="hex-brick h1"></div><div class="hex-brick h2"></div><div class="hex-brick h3"></div></div>
+      <div class="gel c2 r1"><div class="hex-brick h1"></div><div class="hex-brick h2"></div><div class="hex-brick h3"></div></div>
+      <div class="gel c3 r1"><div class="hex-brick h1"></div><div class="hex-brick h2"></div><div class="hex-brick h3"></div></div>
+      <div class="gel c4 r1"><div class="hex-brick h1"></div><div class="hex-brick h2"></div><div class="hex-brick h3"></div></div>
+      <div class="gel c5 r1"><div class="hex-brick h1"></div><div class="hex-brick h2"></div><div class="hex-brick h3"></div></div>
+      <div class="gel c6 r1"><div class="hex-brick h1"></div><div class="hex-brick h2"></div><div class="hex-brick h3"></div></div>
+      <div class="gel c7 r2"><div class="hex-brick h1"></div><div class="hex-brick h2"></div><div class="hex-brick h3"></div></div>
+      <div class="gel c8 r2"><div class="hex-brick h1"></div><div class="hex-brick h2"></div><div class="hex-brick h3"></div></div>
+      <div class="gel c9 r2"><div class="hex-brick h1"></div><div class="hex-brick h2"></div><div class="hex-brick h3"></div></div>
+      <div class="gel c10 r2"><div class="hex-brick h1"></div><div class="hex-brick h2"></div><div class="hex-brick h3"></div></div>
+      <div class="gel c11 r2"><div class="hex-brick h1"></div><div class="hex-brick h2"></div><div class="hex-brick h3"></div></div>
+      <div class="gel c12 r2"><div class="hex-brick h1"></div><div class="hex-brick h2"></div><div class="hex-brick h3"></div></div>
+      <div class="gel c13 r2"><div class="hex-brick h1"></div><div class="hex-brick h2"></div><div class="hex-brick h3"></div></div>
+      <div class="gel c14 r2"><div class="hex-brick h1"></div><div class="hex-brick h2"></div><div class="hex-brick h3"></div></div>
+      <div class="gel c15 r2"><div class="hex-brick h1"></div><div class="hex-brick h2"></div><div class="hex-brick h3"></div></div>
+      <div class="gel c16 r2"><div class="hex-brick h1"></div><div class="hex-brick h2"></div><div class="hex-brick h3"></div></div>
+      <div class="gel c17 r2"><div class="hex-brick h1"></div><div class="hex-brick h2"></div><div class="hex-brick h3"></div></div>
+      <div class="gel c18 r2"><div class="hex-brick h1"></div><div class="hex-brick h2"></div><div class="hex-brick h3"></div></div>
+      <div class="gel c19 r3"><div class="hex-brick h1"></div><div class="hex-brick h2"></div><div class="hex-brick h3"></div></div>
+      <div class="gel c20 r3"><div class="hex-brick h1"></div><div class="hex-brick h2"></div><div class="hex-brick h3"></div></div>
+      <div class="gel c21 r3"><div class="hex-brick h1"></div><div class="hex-brick h2"></div><div class="hex-brick h3"></div></div>
+      <div class="gel c22 r3"><div class="hex-brick h1"></div><div class="hex-brick h2"></div><div class="hex-brick h3"></div></div>
+      <div class="gel c23 r3"><div class="hex-brick h1"></div><div class="hex-brick h2"></div><div class="hex-brick h3"></div></div>
+      <div class="gel c24 r3"><div class="hex-brick h1"></div><div class="hex-brick h2"></div><div class="hex-brick h3"></div></div>
+      <div class="gel c25 r3"><div class="hex-brick h1"></div><div class="hex-brick h2"></div><div class="hex-brick h3"></div></div>
+      <div class="gel c26 r3"><div class="hex-brick h1"></div><div class="hex-brick h2"></div><div class="hex-brick h3"></div></div>
+      <div class="gel c28 r3"><div class="hex-brick h1"></div><div class="hex-brick h2"></div><div class="hex-brick h3"></div></div>
+      <div class="gel c29 r3"><div class="hex-brick h1"></div><div class="hex-brick h2"></div><div class="hex-brick h3"></div></div>
+      <div class="gel c30 r3"><div class="hex-brick h1"></div><div class="hex-brick h2"></div><div class="hex-brick h3"></div></div>
+      <div class="gel c31 r3"><div class="hex-brick h1"></div><div class="hex-brick h2"></div><div class="hex-brick h3"></div></div>
+      <div class="gel c32 r3"><div class="hex-brick h1"></div><div class="hex-brick h2"></div><div class="hex-brick h3"></div></div>
+      <div class="gel c33 r3"><div class="hex-brick h1"></div><div class="hex-brick h2"></div><div class="hex-brick h3"></div></div>
+      <div class="gel c34 r3"><div class="hex-brick h1"></div><div class="hex-brick h2"></div><div class="hex-brick h3"></div></div>
+      <div class="gel c35 r3"><div class="hex-brick h1"></div><div class="hex-brick h2"></div><div class="hex-brick h3"></div></div>
+      <div class="gel c36 r3"><div class="hex-brick h1"></div><div class="hex-brick h2"></div><div class="hex-brick h3"></div></div>
+      <div class="gel c37 r3"><div class="hex-brick h1"></div><div class="hex-brick h2"></div><div class="hex-brick h3"></div></div>
+    </div>
+    <div class="loading-title">CARGANDO</div>
+    <div class="loading-progress" aria-hidden="true"></div>
+  </div>
+</div>
+
+<div id="dashboard-wrap">
+
+<!-- ═══════════ SIDEBAR ═══════════ -->
+<nav id="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5L12 1zm0 4l6 2.69V11c0 3.72-2.56 7.2-6 8.31-3.44-1.11-6-4.59-6-8.31V7.69L12 5z"/></svg>
+    </div>
+    <div>
+      <div class="logo-text">FortiGate</div>
+      <div class="logo-sub">WEB FILTER</div>
+    </div>
+  </div>
+
+  <div class="sidebar-body">
+    <div class="nav-section-label">Principal</div>
+
+    <div class="nav-item active" data-page="inicio">
+      <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <span class="nav-label">Inicio</span>
+    </div>
+    <div class="nav-item" data-page="filtrado">
+      <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+      <span class="nav-label">Filtrado Web</span>
+    </div>
+    <div class="nav-item" data-page="usuarios">
+      <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <span class="nav-label">Usuarios</span>
+    </div>
+    <div class="nav-item" data-page="alertas">
+      <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      <span class="nav-label">Alertas</span>
+      <span class="nav-badge">3</span>
+    </div>
+
+    <div class="nav-section-label" style="margin-top:8px;">Configuración</div>
+
+    <div class="nav-item" data-page="politicas">
+      <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      <span class="nav-label">Políticas</span>
+    </div>
+    <div class="nav-item" data-page="categorias">
+      <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+      <span class="nav-label">Categorías</span>
+    </div>
+    <div class="nav-item" data-page="listas">
+      <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      <span class="nav-label">Listas URL</span>
+      <span class="nav-badge green">47</span>
+    </div>
+    <div class="nav-item" data-page="cuotas">
+      <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <span class="nav-label">Cuotas</span>
+    </div>
+
+    <div class="nav-section-label" style="margin-top:8px;">Análisis</div>
+
+    <div class="nav-item" data-page="trafico">
+      <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      <span class="nav-label">Monitoreo</span>
+    </div>
+    <div class="nav-item" data-page="logs">
+      <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      <span class="nav-label">Logs y Reportes</span>
+    </div>
+
+    <div class="nav-section-label" style="margin-top:8px;">Sistema</div>
+
+    <div class="nav-item" data-page="avanzado">
+      <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      <span class="nav-label">Config. Avanzada</span>
+    </div>
+    <div class="nav-item" data-page="fortiguard">
+      <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+      <span class="nav-label">FortiGuard DB</span>
+    </div>
+    <div class="nav-item" data-page="ajustes">
+      <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      <span class="nav-label">Ajustes</span>
+    </div>
+    <div class="nav-item" data-page="ayuda">
+      <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <span class="nav-label">Ayuda</span>
+    </div>
+  </div>
+
+  <div class="sidebar-footer">
+    <div class="nav-item">
+      <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      <span class="nav-label">Cerrar sesión</span>
+    </div>
+  </div>
+</nav>
+
+<!-- ═══════════ MAIN ═══════════ -->
+<div id="main">
+  <header id="topbar">
+    <button id="toggle-btn" title="Colapsar menú">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <span class="topbar-title" id="topbar-title">Inicio</span>
+    <div class="topbar-search">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <input id="global-search" type="search" placeholder="Buscar módulo, usuario, dominio…">
+    </div>
+    <div class="topbar-status">
+      <div class="status-dot"></div>
+      <span id="service-status-text">Servicio activo</span>
+    </div>
+    <span class="topbar-clock" id="soc-clock">--:--:--</span>
+    <button class="topbar-btn" id="logs-shortcut">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="14" y2="12"/><line x1="4" y1="18" x2="18" y2="18"/></svg>
+      Logs
+    </button>
+    <button class="topbar-btn" id="refresh-btn">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+      Actualizar
+    </button>
+    <div class="avatar" data-tip="admin@empresa.com">AD</div>
+  </header>
+
+  <div id="content">
+
+    <!-- ════ INICIO ════ -->
+    <div class="page active" id="page-inicio">
+      <div class="page-header">
+        <div>
+          <h1>Panel de control</h1>
+          <p>Resumen del sistema · FortiOS 7.4.3 · FG-200F</p>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <span class="badge badge-allow" style="font-size:11px;padding:4px 12px;">● Sistema operativo</span>
+          <span class="badge badge-warn" style="font-size:11px;padding:4px 12px;">▲ 3 alertas activas</span>
+        </div>
+      </div>
+
+      <div class="ops-strip">
+        <div class="ops-item">
+          <div class="ops-label">Postura de seguridad</div>
+          <div class="ops-value">96/100 <span class="ops-note">salud alta</span></div>
+        </div>
+        <div class="ops-item">
+          <div class="ops-label">Última sincronización</div>
+          <div class="ops-value" id="last-sync-value">hace 12 min <span class="ops-note">FortiGuard</span></div>
+        </div>
+        <div class="ops-item">
+          <div class="ops-label">Bloqueos por minuto</div>
+          <div class="ops-value" id="blocks-per-minute">42 <span class="ops-note">prom. 5 min</span></div>
+        </div>
+        <div class="ops-item">
+          <div class="ops-label">Riesgo actual</div>
+          <div class="ops-value" style="color:var(--amber);">Medio <span class="ops-note">3 alertas</span></div>
+        </div>
+      </div>
+
+      <!-- Info box -->
+      <div class="info-box" style="margin-bottom:20px;">
+        <div class="info-box-title">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          ¿Qué es el Filtrado Web en FortiGate?
+        </div>
+        <p>El filtrado web controla qué páginas son accesibles desde la red corporativa. FortiGate analiza cada URL en tiempo real, aplica políticas definidas por el administrador y bloquea o permite el tráfico según las categorías FortiGuard. Protege contra malware, phishing, contenido inapropiado y mejora la productividad.</p>
+      </div>
+
+      <div class="metrics-row">
+        <div class="metric m-blue flip-kpi">
+          <div class="kpi-flip-content">
+            <div class="kpi-face kpi-front">
+              <div class="kpi-orbs"><span class="kpi-orb one"></span><span class="kpi-orb two"></span><span class="kpi-orb three"></span></div>
+              <div class="kpi-front-content">
+                <span class="kpi-chip">TRÁFICO</span>
+                <div class="kpi-description">
+                  <div class="kpi-title-row"><div class="metric-label">Solicitudes totales</div><span class="delta-up">↑ 8%</span></div>
+                  <div class="metric-val">1.24M</div>
+                  <div class="metric-delta">vs ayer</div>
+                </div>
+              </div>
+            </div>
+            <div class="kpi-face kpi-back">
+              <div class="kpi-back-content">
+                <div class="kpi-back-title">Lectura experta</div>
+                <div class="kpi-back-copy">El volumen está dentro del patrón laboral. No hay picos anómalos en la ventana actual.</div>
+                <div class="kpi-back-code">p95: 143 req/s · SLA: OK</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="metric m-red flip-kpi">
+          <div class="kpi-flip-content">
+            <div class="kpi-face kpi-front">
+              <div class="kpi-orbs"><span class="kpi-orb one"></span><span class="kpi-orb two"></span><span class="kpi-orb three"></span></div>
+              <div class="kpi-front-content">
+                <span class="kpi-chip">DEFENSA</span>
+                <div class="kpi-description">
+                  <div class="kpi-title-row"><div class="metric-label">Sitios bloqueados</div><span class="delta-dn">↑ 12%</span></div>
+                  <div class="metric-val">87,402</div>
+                  <div class="metric-delta">amenazas</div>
+                </div>
+              </div>
+            </div>
+            <div class="kpi-face kpi-back">
+              <div class="kpi-back-content">
+                <div class="kpi-back-title">Prioridad SOC</div>
+                <div class="kpi-back-copy">Phishing y malware concentran la mayor actividad. Revisa hosts con reincidencia.</div>
+                <div class="kpi-back-code">top host: 192.168.10.45</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="metric m-amber flip-kpi">
+          <div class="kpi-flip-content">
+            <div class="kpi-face kpi-front">
+              <div class="kpi-orbs"><span class="kpi-orb one"></span><span class="kpi-orb two"></span><span class="kpi-orb three"></span></div>
+              <div class="kpi-front-content">
+                <span class="kpi-chip">ALERTAS</span>
+                <div class="kpi-description">
+                  <div class="kpi-title-row"><div class="metric-label">Alertas activas</div><span class="ops-note">medio</span></div>
+                  <div class="metric-val">3</div>
+                  <div class="metric-delta">requieren atención</div>
+                </div>
+              </div>
+            </div>
+            <div class="kpi-face kpi-back">
+              <div class="kpi-back-content">
+                <div class="kpi-back-title">Cola de atención</div>
+                <div class="kpi-back-copy">Una alerta crítica, una de cuota y una de actualización pendiente.</div>
+                <div class="kpi-back-code">MTTR estimado: 18 min</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="metric m-green flip-kpi">
+          <div class="kpi-flip-content">
+            <div class="kpi-face kpi-front">
+              <div class="kpi-orbs"><span class="kpi-orb one"></span><span class="kpi-orb two"></span><span class="kpi-orb three"></span></div>
+              <div class="kpi-front-content">
+                <span class="kpi-chip">IDENTIDAD</span>
+                <div class="kpi-description">
+                  <div class="kpi-title-row"><div class="metric-label">Usuarios activos</div><span class="delta-up">+5</span></div>
+                  <div class="metric-val">342</div>
+                  <div class="metric-delta">nuevos hoy</div>
+                </div>
+              </div>
+            </div>
+            <div class="kpi-face kpi-back">
+              <div class="kpi-back-content">
+                <div class="kpi-back-title">Segmentación</div>
+                <div class="kpi-back-copy">201 usuarios conectados ahora. BYOD mantiene el mayor nivel de restricción.</div>
+                <div class="kpi-back-code">grupos activos: 5</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            Tráfico por hora (hoy)
+          </div>
+          <div style="position:relative;height:180px;">
+            <canvas id="chartTraficoInicio"></canvas>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+            Categorías más bloqueadas
+          </div>
+          <div class="bar-row"><span class="bar-name">Malware / C&C</span><div class="bar-track"><div class="bar-fill" style="width:88%;background:#f85149;"></div></div><span class="bar-pct">88%</span></div>
+          <div class="bar-row"><span class="bar-name">Phishing</span><div class="bar-track"><div class="bar-fill" style="width:72%;background:#d29922;"></div></div><span class="bar-pct">72%</span></div>
+          <div class="bar-row"><span class="bar-name">Redes sociales</span><div class="bar-track"><div class="bar-fill" style="width:54%;background:#00ff84;"></div></div><span class="bar-pct">54%</span></div>
+          <div class="bar-row"><span class="bar-name">Streaming</span><div class="bar-track"><div class="bar-fill" style="width:41%;background:#35ffa0;"></div></div><span class="bar-pct">41%</span></div>
+          <div class="bar-row"><span class="bar-name">Juegos en línea</span><div class="bar-track"><div class="bar-fill" style="width:28%;background:#a371f7;"></div></div><span class="bar-pct">28%</span></div>
+          <div class="bar-row"><span class="bar-name">Torrents / P2P</span><div class="bar-track"><div class="bar-fill" style="width:19%;background:#6e7681;"></div></div><span class="bar-pct">19%</span></div>
+        </div>
+      </div>
+
+      <div class="grid-2-1">
+        <div class="card">
+          <div class="card-title">Eventos recientes</div>
+          <div class="event"><div class="ev-dot ev-red"></div><div style="flex:1"><div class="ev-main">Bloqueo: sitio de phishing detectado</div><div class="ev-meta">192.168.10.45 → phish-login.ru · Política corporativa</div></div><div class="ev-time">4 min</div></div>
+          <div class="event"><div class="ev-dot ev-amber"></div><div style="flex:1"><div class="ev-main">Cuota próxima a agotarse — Juegos</div><div class="ev-meta">47 usuarios · 19/20 min consumidos</div></div><div class="ev-time">11 min</div></div>
+          <div class="event"><div class="ev-dot ev-red"></div><div style="flex:1"><div class="ev-main">Bloqueo: descarga de malware bloqueada</div><div class="ev-meta">192.168.22.18 → cdn-dl.xyz/payload.exe</div></div><div class="ev-time">18 min</div></div>
+          <div class="event"><div class="ev-dot ev-blue"></div><div style="flex:1"><div class="ev-main">Excepción aprobada por administrador</div><div class="ev-meta">teams.microsoft.com añadido a lista blanca</div></div><div class="ev-time">34 min</div></div>
+          <div class="event"><div class="ev-dot ev-amber"></div><div style="flex:1"><div class="ev-main">Advertencia: contenido adulto detectado</div><div class="ev-meta">192.168.30.7 · usuario notificado</div></div><div class="ev-time">1 h</div></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Distribución de acciones</div>
+          <div style="position:relative;height:140px;margin-bottom:12px;"><canvas id="chartDonut"></canvas></div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;font-size:11px;"><span style="display:flex;align-items:center;gap:6px;color:var(--text2);"><span style="width:8px;height:8px;border-radius:2px;background:#00ff84;display:inline-block;"></span>Permitidas</span><span style="font-family:var(--mono);color:var(--green);">92%</span></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;font-size:11px;"><span style="display:flex;align-items:center;gap:6px;color:var(--text2);"><span style="width:8px;height:8px;border-radius:2px;background:#f85149;display:inline-block;"></span>Bloqueadas</span><span style="font-family:var(--mono);color:var(--red);">7%</span></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;font-size:11px;"><span style="display:flex;align-items:center;gap:6px;color:var(--text2);"><span style="width:8px;height:8px;border-radius:2px;background:#d29922;display:inline-block;"></span>Advertencias</span><span style="font-family:var(--mono);color:var(--amber);">1%</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ FILTRADO WEB ════ -->
+    <div class="page" id="page-filtrado">
+      <div class="page-header">
+        <div><h1>Filtrado Web</h1><p>Configuración principal del motor de filtrado</p></div>
+        <div style="display:flex;gap:8px;">
+          <span id="filtrado-estado" class="badge badge-allow" style="font-size:11px;padding:6px 14px;">● Filtrado ACTIVO</span>
+          <button class="btn btn-danger" id="btn-toggle-filtrado">Desactivar filtrado</button>
+        </div>
+      </div>
+
+      <div class="grid-2" style="margin-bottom:16px;">
+        <div class="card">
+          <div class="card-title">Control global de filtrado</div>
+          <div class="toggle-wrap" style="margin-bottom:14px;padding:12px;background:var(--bg3);border-radius:var(--radius);">
+            <label class="switch"><input type="checkbox" checked id="sw-global"><span class="slider"></span></label>
+            <div><div class="toggle-label" style="font-size:13px;font-weight:500;color:var(--text);">Filtrado Web Activo</div><div style="font-size:11px;color:var(--text3);margin-top:2px;">Controla todo el tráfico HTTP/HTTPS saliente</div></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div class="toggle-wrap"><label class="switch"><input type="checkbox" checked><span class="slider"></span></label><span class="toggle-label">Filtrado por categorías FortiGuard</span></div>
+            <div class="toggle-wrap"><label class="switch"><input type="checkbox" checked><span class="slider"></span></label><span class="toggle-label">Filtrado por URL específica</span></div>
+            <div class="toggle-wrap"><label class="switch"><input type="checkbox" checked><span class="slider"></span></label><span class="toggle-label">Inspección HTTPS (SSL)</span></div>
+            <div class="toggle-wrap"><label class="switch"><input type="checkbox" checked><span class="slider"></span></label><span class="toggle-label">SafeSearch forzado</span></div>
+            <div class="toggle-wrap"><label class="switch"><input type="checkbox"><span class="slider"></span></label><span class="toggle-label">Modo solo auditoría</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Tipos de filtrado disponibles</div>
+          <div class="event"><div class="ev-dot ev-blue"></div><div><div class="ev-main">Por Categorías</div><div class="ev-meta">FortiGuard clasifica 90+ categorías — bloqueo masivo por tipo de contenido (redes sociales, adultos, juegos, malware…)</div></div></div>
+          <div class="event"><div class="ev-dot ev-blue"></div><div><div class="ev-main">Por URL Específica</div><div class="ev-meta">Listas negras y blancas personalizadas — control exacto sobre dominios o patrones concretos</div></div></div>
+          <div class="event"><div class="ev-dot ev-blue"></div><div><div class="ev-main">Por Perfil de Usuario</div><div class="ev-meta">Políticas distintas según el rol — estudiantes, administradores, invitados tienen reglas diferentes</div></div></div>
+          <div class="event"><div class="ev-dot ev-blue"></div><div><div class="ev-main">Por Cuota de Tiempo</div><div class="ev-meta">Acceso limitado por minutos diarios — permite 20 min de juegos, 30 min de redes sociales, etc.</div></div></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-title">Perfiles de filtrado</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Perfil</th><th>Nivel de restricción</th><th>Usuarios</th><th>Categorías bloqueadas</th><th>Estado</th><th>Acciones</th></tr></thead>
+            <tbody>
+              <tr><td>Perfil Estándar</td><td><div class="bar-track" style="width:120px;display:inline-block;"><div class="bar-fill" style="width:60%;background:#00ff84;"></div></div></td><td style="font-family:var(--mono);">290</td><td style="font-family:var(--mono);">22</td><td><span class="badge badge-allow">Activo</span></td><td><button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;">Editar</button></td></tr>
+              <tr><td>Perfil Estricto (BYOD)</td><td><div class="bar-track" style="width:120px;display:inline-block;"><div class="bar-fill" style="width:90%;background:#f85149;"></div></div></td><td style="font-family:var(--mono);">88</td><td style="font-family:var(--mono);">35</td><td><span class="badge badge-allow">Activo</span></td><td><button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;">Editar</button></td></tr>
+              <tr><td>Perfil IT / Admin</td><td><div class="bar-track" style="width:120px;display:inline-block;"><div class="bar-fill" style="width:20%;background:#35ffa0;"></div></div></td><td style="font-family:var(--mono);">18</td><td style="font-family:var(--mono);">8</td><td><span class="badge badge-allow">Activo</span></td><td><button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;">Editar</button></td></tr>
+              <tr><td>Perfil Invitados</td><td><div class="bar-track" style="width:120px;display:inline-block;"><div class="bar-fill" style="width:75%;background:#d29922;"></div></div></td><td style="font-family:var(--mono);">52</td><td style="font-family:var(--mono);">28</td><td><span class="badge badge-allow">Activo</span></td><td><button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;">Editar</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ USUARIOS ════ -->
+    <div class="page" id="page-usuarios">
+      <div class="page-header">
+        <div><h1>Usuarios y Perfiles</h1><p>Gestión de usuarios y asignación de políticas</p></div>
+        <button class="btn btn-primary"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="13" height="13"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nuevo usuario</button>
+      </div>
+
+      <div class="metrics-row">
+        <div class="metric m-blue"><div class="metric-label">Total usuarios</div><div class="metric-val">342</div><div class="metric-delta">registrados</div></div>
+        <div class="metric m-green"><div class="metric-label">Conectados ahora</div><div class="metric-val">201</div><div class="metric-delta"><span class="delta-up">↑ 12</span> vs hace 1h</div></div>
+        <div class="metric m-amber"><div class="metric-label">Con alertas</div><div class="metric-val">4</div><div class="metric-delta">requieren revisión</div></div>
+        <div class="metric m-purple" style="background:var(--bg2);border:1px solid var(--border);"><div class="metric-label">Grupos</div><div class="metric-val">5</div><div class="metric-delta">configurados</div></div>
+      </div>
+
+      <div class="grid-2-1">
+        <div class="card">
+          <div class="card-title">Lista de usuarios</div>
+          <div class="filter-row">
+            <input type="text" class="form-input" id="user-search" placeholder="Buscar usuario o IP…">
+            <select class="form-select" id="user-profile-filter" style="max-width:150px;">
+              <option>Todos los perfiles</option>
+              <option>Estándar</option>
+              <option>Estricto</option>
+              <option>Admin</option>
+              <option>Invitados</option>
+            </select>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Usuario</th><th>IP</th><th>Perfil</th><th>Solicitudes</th><th>Estado</th><th></th></tr></thead>
+              <tbody id="users-table-body">
+                <tr><td>jlopez</td><td style="font-family:var(--mono);color:var(--text3);">192.168.10.45</td><td><span class="badge badge-warn">Estándar</span></td><td style="font-family:var(--mono);">8,201</td><td><span class="badge badge-warn">Alerta</span></td><td><button class="btn btn-ghost" style="font-size:10px;padding:3px 8px;">Ver</button></td></tr>
+                <tr><td>mgarcia</td><td style="font-family:var(--mono);color:var(--text3);">192.168.22.18</td><td><span class="badge badge-allow">Estándar</span></td><td style="font-family:var(--mono);">6,714</td><td><span class="badge badge-allow">Normal</span></td><td><button class="btn btn-ghost" style="font-size:10px;padding:3px 8px;">Ver</button></td></tr>
+                <tr><td>aperez</td><td style="font-family:var(--mono);color:var(--text3);">192.168.30.7</td><td><span class="badge badge-allow">Estándar</span></td><td style="font-family:var(--mono);">5,988</td><td><span class="badge badge-warn">Cuota</span></td><td><button class="btn btn-ghost" style="font-size:10px;padding:3px 8px;">Ver</button></td></tr>
+                <tr><td>rrodriguez</td><td style="font-family:var(--mono);color:var(--text3);">192.168.14.2</td><td><span class="badge badge-monitor">Admin</span></td><td style="font-family:var(--mono);">4,402</td><td><span class="badge badge-allow">Normal</span></td><td><button class="btn btn-ghost" style="font-size:10px;padding:3px 8px;">Ver</button></td></tr>
+                <tr><td>cmartinez</td><td style="font-family:var(--mono);color:var(--text3);">192.168.9.88</td><td><span class="badge badge-allow">Estándar</span></td><td style="font-family:var(--mono);">3,987</td><td><span class="badge badge-allow">Normal</span></td><td><button class="btn btn-ghost" style="font-size:10px;padding:3px 8px;">Ver</button></td></tr>
+                <tr><td>invitado_01</td><td style="font-family:var(--mono);color:var(--text3);">192.168.50.12</td><td><span class="badge badge-info">Invitado</span></td><td style="font-family:var(--mono);">412</td><td><span class="badge badge-allow">Normal</span></td><td><button class="btn btn-ghost" style="font-size:10px;padding:3px 8px;">Ver</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Perfiles disponibles</div>
+          <div class="user-card">
+            <div class="user-avatar ua-blue">E</div>
+            <div class="user-info"><div class="user-name">Estándar</div><div class="user-meta">290 usuarios · 22 cat. bloq.</div></div>
+            <span class="badge badge-allow">Activo</span>
+          </div>
+          <div class="user-card">
+            <div class="user-avatar ua-red">S</div>
+            <div class="user-info"><div class="user-name">Estricto (BYOD)</div><div class="user-meta">88 usuarios · 35 cat. bloq.</div></div>
+            <span class="badge badge-allow">Activo</span>
+          </div>
+          <div class="user-card">
+            <div class="user-avatar ua-green">A</div>
+            <div class="user-info"><div class="user-name">Administrador</div><div class="user-meta">18 usuarios · solo monitor</div></div>
+            <span class="badge badge-monitor">Monitor</span>
+          </div>
+          <div class="user-card">
+            <div class="user-avatar ua-amber">I</div>
+            <div class="user-info"><div class="user-name">Invitados</div><div class="user-meta">52 usuarios · 28 cat. bloq.</div></div>
+            <span class="badge badge-allow">Activo</span>
+          </div>
+          <div class="user-card">
+            <div class="user-avatar ua-purple">T</div>
+            <div class="user-info"><div class="user-name">VLAN Test</div><div class="user-meta">5 usuarios · solo auditoría</div></div>
+            <span class="badge" style="background:var(--bg3);color:var(--text3);border:1px solid var(--border);">Inactivo</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ ALERTAS ════ -->
+    <div class="page" id="page-alertas">
+      <div class="page-header">
+        <div><h1>Alertas</h1><p>3 alertas activas requieren atención</p></div>
+        <button class="btn btn-ghost">Marcar todas como leídas</button>
+      </div>
+      <div class="card" style="margin-bottom:16px;border-left:3px solid var(--red);">
+        <div class="alert-card">
+          <div class="alert-icon" style="background:var(--red2);"><svg width="18" height="18" fill="none" stroke="#f85149" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+          <div style="flex:1"><div style="font-size:13px;font-weight:500;margin-bottom:4px;">Intento de descarga de malware detectado</div><div style="font-size:12px;color:var(--text2);margin-bottom:8px;">El host 192.168.22.18 intentó descargar <code style="background:var(--bg3);padding:1px 5px;border-radius:4px;font-size:11px;">payload.exe</code> desde cdn-dl.xyz. La política corporativa bloqueó la solicitud.</div><div style="font-size:11px;color:var(--text3);font-family:var(--mono);">Hace 18 min · FortiGuard: Malware · Severidad: CRÍTICA</div></div>
+          <div style="display:flex;gap:6px;flex-shrink:0;"><button class="btn btn-danger" style="font-size:11px;padding:5px 10px;">Bloquear host</button><button class="btn btn-ghost" style="font-size:11px;padding:5px 10px;">Ignorar</button></div>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:16px;border-left:3px solid var(--amber);">
+        <div class="alert-card">
+          <div class="alert-icon" style="background:var(--amber2);"><svg width="18" height="18" fill="none" stroke="#d29922" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+          <div style="flex:1"><div style="font-size:13px;font-weight:500;margin-bottom:4px;">Cuota de tiempo casi agotada — Juegos en línea</div><div style="font-size:12px;color:var(--text2);margin-bottom:8px;">47 usuarios han consumido 19 de los 20 minutos diarios permitidos para la categoría <strong>Juegos en línea</strong>.</div><div style="font-size:11px;color:var(--text3);font-family:var(--mono);">Hace 11 min · Cuota temporal · Severidad: MEDIA</div></div>
+          <div style="display:flex;gap:6px;flex-shrink:0;"><button class="btn btn-primary" style="font-size:11px;padding:5px 10px;">Ampliar cuota</button><button class="btn btn-ghost" style="font-size:11px;padding:5px 10px;">Ignorar</button></div>
+        </div>
+      </div>
+      <div class="card" style="border-left:3px solid var(--accent2);">
+        <div class="alert-card">
+          <div class="alert-icon" style="background:rgba(0,255,132,0.12);"><svg width="18" height="18" fill="none" stroke="#00ff84" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+          <div style="flex:1"><div style="font-size:13px;font-weight:500;margin-bottom:4px;">Actualización de base de datos FortiGuard disponible</div><div style="font-size:12px;color:var(--text2);margin-bottom:8px;">Nueva versión v17.44.0 disponible. Se recomienda actualizar para protección contra amenazas emergentes.</div><div style="font-size:11px;color:var(--text3);font-family:var(--mono);">Hace 2 h · FortiGuard · Severidad: BAJA</div></div>
+          <div style="display:flex;gap:6px;flex-shrink:0;"><button class="btn btn-primary" style="font-size:11px;padding:5px 10px;">Actualizar ahora</button><button class="btn btn-ghost" style="font-size:11px;padding:5px 10px;">Posponer</button></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ POLÍTICAS ════ -->
+    <div class="page" id="page-politicas">
+      <div class="page-header">
+        <div><h1>Políticas de seguridad</h1><p>Reglas de control de acceso web — prioridad descendente</p></div>
+        <button class="btn btn-primary"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="13" height="13"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nueva política</button>
+      </div>
+
+      <div class="info-box" style="margin-bottom:16px;">
+        <div class="info-box-title">Orden de procesamiento de reglas</div>
+        <p>Las políticas se evalúan de arriba hacia abajo. La primera regla que coincide se aplica y el resto se omite. Coloca las reglas más específicas al inicio y las generales al final.</p>
+      </div>
+
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>#</th><th>Nombre</th><th>Alcance</th><th>Usuarios</th><th>Acción</th><th>Categorías</th><th>Estado</th><th>Acciones</th></tr></thead>
+            <tbody>
+              <tr><td style="color:var(--text3);font-family:var(--mono);">1</td><td>Lista blanca corporativa</td><td style="color:var(--text2);">Todos</td><td style="font-family:var(--mono);">342</td><td><span class="badge badge-allow">Permitir</span></td><td style="font-family:var(--mono);">47 URLs</td><td><span class="badge badge-allow">Activa</span></td><td><button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;">Editar</button></td></tr>
+              <tr><td style="color:var(--text3);font-family:var(--mono);">2</td><td>Política corporativa general</td><td style="color:var(--text2);">Todos los segmentos</td><td style="font-family:var(--mono);">312</td><td><span class="badge badge-block">Bloquear</span></td><td style="font-family:var(--mono);">22</td><td><span class="badge badge-allow">Activa</span></td><td><button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;">Editar</button></td></tr>
+              <tr><td style="color:var(--text3);font-family:var(--mono);">3</td><td>Restricción BYOD</td><td style="color:var(--text2);">VLAN Invitados</td><td style="font-family:var(--mono);">88</td><td><span class="badge badge-block">Bloquear</span></td><td style="font-family:var(--mono);">35</td><td><span class="badge badge-allow">Activa</span></td><td><button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;">Editar</button></td></tr>
+              <tr><td style="color:var(--text3);font-family:var(--mono);">4</td><td>Cuotas redes sociales</td><td style="color:var(--text2);">Segmento general</td><td style="font-family:var(--mono);">290</td><td><span class="badge badge-warn">Cuota</span></td><td style="font-family:var(--mono);">5</td><td><span class="badge badge-allow">Activa</span></td><td><button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;">Editar</button></td></tr>
+              <tr><td style="color:var(--text3);font-family:var(--mono);">5</td><td>Acceso IT / Admins</td><td style="color:var(--text2);">Seg. administración</td><td style="font-family:var(--mono);">18</td><td><span class="badge badge-monitor">Monitor</span></td><td style="font-family:var(--mono);">8</td><td><span class="badge badge-allow">Activa</span></td><td><button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;">Editar</button></td></tr>
+              <tr><td style="color:var(--text3);font-family:var(--mono);">6</td><td>Política de prueba</td><td style="color:var(--text2);">VLAN Test</td><td style="font-family:var(--mono);">5</td><td><span class="badge badge-monitor">Monitor</span></td><td style="font-family:var(--mono);">12</td><td><span class="badge" style="background:var(--bg3);color:var(--text3);border:1px solid var(--border);">Inactiva</span></td><td><button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;">Editar</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ CATEGORÍAS ════ -->
+    <div class="page" id="page-categorias">
+      <div class="page-header">
+        <div><h1>Categorías FortiGuard</h1><p>Control de 90 categorías de contenido web</p></div>
+      </div>
+      <div class="grid-3">
+        <div class="card">
+          <div class="card-title" style="color:var(--red);">Seguridad</div>
+          <div class="stat-row"><span class="stat-k">Malware</span><span class="badge badge-block">Bloquear</span></div>
+          <div class="stat-row"><span class="stat-k">Phishing</span><span class="badge badge-block">Bloquear</span></div>
+          <div class="stat-row"><span class="stat-k">C&C / Botnet</span><span class="badge badge-block">Bloquear</span></div>
+          <div class="stat-row"><span class="stat-k">Spam URLs</span><span class="badge badge-block">Bloquear</span></div>
+          <div class="stat-row"><span class="stat-k">Drive-by exploit</span><span class="badge badge-block">Bloquear</span></div>
+        </div>
+        <div class="card">
+          <div class="card-title" style="color:var(--amber);">Productividad</div>
+          <div class="stat-row"><span class="stat-k">Redes sociales</span><span class="badge badge-warn">Cuota 30m</span></div>
+          <div class="stat-row"><span class="stat-k">Streaming video</span><span class="badge badge-warn">Cuota 60m</span></div>
+          <div class="stat-row"><span class="stat-k">Juegos en línea</span><span class="badge badge-warn">Cuota 20m</span></div>
+          <div class="stat-row"><span class="stat-k">Foros / Blogs</span><span class="badge badge-monitor">Monitor</span></div>
+          <div class="stat-row"><span class="stat-k">Compras online</span><span class="badge badge-allow">Permitir</span></div>
+        </div>
+        <div class="card">
+          <div class="card-title" style="color:var(--accent2);">Legal / Cumplimiento</div>
+          <div class="stat-row"><span class="stat-k">Adultos</span><span class="badge badge-block">Bloquear</span></div>
+          <div class="stat-row"><span class="stat-k">Violencia</span><span class="badge badge-block">Bloquear</span></div>
+          <div class="stat-row"><span class="stat-k">Drogas / Alcohol</span><span class="badge badge-block">Bloquear</span></div>
+          <div class="stat-row"><span class="stat-k">Juego / Apuestas</span><span class="badge badge-block">Bloquear</span></div>
+          <div class="stat-row"><span class="stat-k">Proxy / VPN</span><span class="badge badge-block">Bloquear</span></div>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">Aplicaciones y tecnología</div>
+          <div class="stat-row"><span class="stat-k">Herramientas IT</span><span class="badge badge-allow">Permitir</span></div>
+          <div class="stat-row"><span class="stat-k">Software / OS</span><span class="badge badge-allow">Permitir</span></div>
+          <div class="stat-row"><span class="stat-k">Repositorios código</span><span class="badge badge-allow">Permitir</span></div>
+          <div class="stat-row"><span class="stat-k">P2P / Torrent</span><span class="badge badge-block">Bloquear</span></div>
+          <div class="stat-row"><span class="stat-k">Almac. en la nube</span><span class="badge badge-monitor">Monitor</span></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Noticias y educación</div>
+          <div class="stat-row"><span class="stat-k">Noticias</span><span class="badge badge-allow">Permitir</span></div>
+          <div class="stat-row"><span class="stat-k">Educación</span><span class="badge badge-allow">Permitir</span></div>
+          <div class="stat-row"><span class="stat-k">Finanzas</span><span class="badge badge-allow">Permitir</span></div>
+          <div class="stat-row"><span class="stat-k">Salud</span><span class="badge badge-allow">Permitir</span></div>
+          <div class="stat-row"><span class="stat-k">Gobierno</span><span class="badge badge-allow">Permitir</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ LISTAS URL ════ -->
+    <div class="page" id="page-listas">
+      <div class="page-header">
+        <div><h1>Listas de URL</h1><p>Listas blancas y negras personalizadas</p></div>
+        <button class="btn btn-primary"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="13" height="13"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Añadir URL</button>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title" style="color:var(--green);">Lista blanca (47 entradas)</div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>URL / Patrón</th><th>Añadida por</th><th>Fecha</th><th></th></tr></thead>
+              <tbody>
+                <tr><td>*.empresa.com</td><td style="color:var(--text2);">admin</td><td style="font-family:var(--mono);color:var(--text3);">2024-01-10</td><td><button class="btn btn-ghost" style="font-size:10px;padding:3px 8px;">Eliminar</button></td></tr>
+                <tr><td>teams.microsoft.com</td><td style="color:var(--text2);">admin</td><td style="font-family:var(--mono);color:var(--text3);">2025-04-28</td><td><button class="btn btn-ghost" style="font-size:10px;padding:3px 8px;">Eliminar</button></td></tr>
+                <tr><td>*.office365.com</td><td style="color:var(--text2);">admin</td><td style="font-family:var(--mono);color:var(--text3);">2024-03-15</td><td><button class="btn btn-ghost" style="font-size:10px;padding:3px 8px;">Eliminar</button></td></tr>
+                <tr><td>github.com</td><td style="color:var(--text2);">jlopez</td><td style="font-family:var(--mono);color:var(--text3);">2024-11-02</td><td><button class="btn btn-ghost" style="font-size:10px;padding:3px 8px;">Eliminar</button></td></tr>
+                <tr><td>zoom.us</td><td style="color:var(--text2);">admin</td><td style="font-family:var(--mono);color:var(--text3);">2024-06-20</td><td><button class="btn btn-ghost" style="font-size:10px;padding:3px 8px;">Eliminar</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title" style="color:var(--red);">Lista negra (23 entradas)</div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>URL / Patrón</th><th>Motivo</th><th>Fecha</th><th></th></tr></thead>
+              <tbody>
+                <tr><td>phish-login.ru</td><td><span class="badge badge-block">Phishing</span></td><td style="font-family:var(--mono);color:var(--text3);">2025-05-04</td><td><button class="btn btn-ghost" style="font-size:10px;padding:3px 8px;">Eliminar</button></td></tr>
+                <tr><td>cdn-dl.xyz</td><td><span class="badge badge-block">Malware</span></td><td style="font-family:var(--mono);color:var(--text3);">2025-05-04</td><td><button class="btn btn-ghost" style="font-size:10px;padding:3px 8px;">Eliminar</button></td></tr>
+                <tr><td>torrent-hd.net</td><td><span class="badge badge-block">P2P</span></td><td style="font-family:var(--mono);color:var(--text3);">2025-03-18</td><td><button class="btn btn-ghost" style="font-size:10px;padding:3px 8px;">Eliminar</button></td></tr>
+                <tr><td>casino-online.io</td><td><span class="badge badge-block">Juegos</span></td><td style="font-family:var(--mono);color:var(--text3);">2025-01-09</td><td><button class="btn btn-ghost" style="font-size:10px;padding:3px 8px;">Eliminar</button></td></tr>
+                <tr><td>vpn-bypass.co</td><td><span class="badge badge-block">Proxy</span></td><td style="font-family:var(--mono);color:var(--text3);">2024-12-14</td><td><button class="btn btn-ghost" style="font-size:10px;padding:3px 8px;">Eliminar</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ CUOTAS ════ -->
+    <div class="page" id="page-cuotas">
+      <div class="page-header">
+        <div><h1>Cuotas de tiempo</h1><p>Límites diarios de navegación por categoría</p></div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">Consumo de cuotas hoy</div>
+          <div class="quota-row"><span class="quota-label">Redes sociales</span><div class="quota-track"><div class="quota-fill" style="width:78%;background:#00ff84;"></div></div><span class="quota-val">23 / 30 min</span></div>
+          <div class="quota-row"><span class="quota-label">Streaming</span><div class="quota-track"><div class="quota-fill" style="width:55%;background:#35ffa0;"></div></div><span class="quota-val">33 / 60 min</span></div>
+          <div class="quota-row"><span class="quota-label">Juegos</span><div class="quota-track"><div class="quota-fill" style="width:98%;background:#f85149;"></div></div><span class="quota-val">19 / 20 min</span></div>
+          <div class="quota-row"><span class="quota-label">Foros</span><div class="quota-track"><div class="quota-fill" style="width:30%;background:#a371f7;"></div></div><span class="quota-val">9 / 30 min</span></div>
+          <div class="quota-row"><span class="quota-label">Noticias</span><div class="quota-track"><div class="quota-fill" style="width:20%;background:#6e7681;"></div></div><span class="quota-val">6 / 30 min</span></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Configurar cuotas</div>
+          <div class="form-group"><label class="form-label">Categoría</label><select class="form-select"><option>Redes sociales</option><option>Streaming</option><option>Juegos en línea</option><option>Foros / Blogs</option><option>Noticias</option></select></div>
+          <div class="form-group"><label class="form-label">Límite diario (minutos)</label><input type="number" class="form-input" value="30" min="5" max="480"></div>
+          <div class="form-group"><label class="form-label">Aplicar a grupo</label><select class="form-select"><option>Todos los usuarios</option><option>Segmento general</option><option>VLAN Invitados</option><option>Administración</option></select></div>
+          <div style="display:flex;gap:8px;margin-top:4px;"><button class="btn btn-primary">Guardar cuota</button><button class="btn btn-ghost">Cancelar</button></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ MONITOREO ════ -->
+    <div class="page" id="page-trafico">
+      <div class="page-header">
+        <div><h1>Monitoreo de Tráfico</h1><p>Análisis de solicitudes HTTP/HTTPS en tiempo real</p></div>
+        <div style="display:flex;gap:8px;">
+          <select class="form-select" style="width:auto;font-size:12px;padding:6px 12px;">
+            <option>Últimas 24 h</option><option>Últimas 12 h</option><option>Última hora</option>
+          </select>
+          <select class="form-select" style="width:auto;font-size:12px;padding:6px 12px;">
+            <option>Todos los usuarios</option><option>jlopez</option><option>mgarcia</option>
+          </select>
+        </div>
+      </div>
+      <div class="metrics-row">
+        <div class="metric m-blue"><div class="metric-label">Solicitudes / seg</div><div class="metric-val">143</div><div class="metric-delta">promedio actual</div></div>
+        <div class="metric m-green"><div class="metric-label">Ancho de banda</div><div class="metric-val">842 MB</div><div class="metric-delta">consumido hoy</div></div>
+        <div class="metric m-red"><div class="metric-label">URLs únicas bloq.</div><div class="metric-val">2,841</div><div class="metric-delta"><span class="delta-dn">↑ 5%</span> vs ayer</div></div>
+        <div class="metric m-amber"><div class="metric-label">Tasa de bloqueo</div><div class="metric-val">7.06%</div><div class="metric-delta">del tráfico total</div></div>
+      </div>
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-title">Tráfico web — últimas 24 h</div>
+        <div style="position:relative;height:220px;"><canvas id="chartTrafico24"></canvas></div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">Top dominios bloqueados hoy</div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>#</th><th>Dominio</th><th>Categoría</th><th>Bloqueos</th></tr></thead>
+              <tbody>
+                <tr><td>1</td><td>phish-login.ru</td><td><span class="badge badge-block">Phishing</span></td><td style="font-family:var(--mono);">4,201</td></tr>
+                <tr><td>2</td><td>torrent-hd.net</td><td><span class="badge badge-block">P2P</span></td><td style="font-family:var(--mono);">3,890</td></tr>
+                <tr><td>3</td><td>cdn-dl.xyz</td><td><span class="badge badge-block">Malware</span></td><td style="font-family:var(--mono);">2,714</td></tr>
+                <tr><td>4</td><td>casino-online.io</td><td><span class="badge badge-block">Juegos</span></td><td style="font-family:var(--mono);">1,988</td></tr>
+                <tr><td>5</td><td>vpn-bypass.co</td><td><span class="badge badge-block">Proxy</span></td><td style="font-family:var(--mono);">1,402</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Páginas más visitadas (permitidas)</div>
+          <div class="bar-row"><span class="bar-name">google.com</span><div class="bar-track"><div class="bar-fill" style="width:95%;background:#00ff84;"></div></div><span class="bar-pct">28k</span></div>
+          <div class="bar-row"><span class="bar-name">office365.com</span><div class="bar-track"><div class="bar-fill" style="width:72%;background:#00ff84;"></div></div><span class="bar-pct">21k</span></div>
+          <div class="bar-row"><span class="bar-name">teams.microsoft.com</span><div class="bar-track"><div class="bar-fill" style="width:58%;background:#00ff84;"></div></div><span class="bar-pct">17k</span></div>
+          <div class="bar-row"><span class="bar-name">github.com</span><div class="bar-track"><div class="bar-fill" style="width:40%;background:#35ffa0;"></div></div><span class="bar-pct">11k</span></div>
+          <div class="bar-row"><span class="bar-name">zoom.us</span><div class="bar-track"><div class="bar-fill" style="width:28%;background:#35ffa0;"></div></div><span class="bar-pct">8k</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">IPs activas y consumo de ancho de banda</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>IP</th><th>Usuario</th><th>Solicitudes</th><th>Descarga</th><th>Carga</th><th>Estado</th></tr></thead>
+            <tbody>
+              <tr><td>192.168.10.45</td><td>jlopez</td><td style="font-family:var(--mono);">8,201</td><td style="font-family:var(--mono);">1.2 GB</td><td style="font-family:var(--mono);">340 MB</td><td><span class="badge badge-warn">Alerta</span></td></tr>
+              <tr><td>192.168.22.18</td><td>mgarcia</td><td style="font-family:var(--mono);">6,714</td><td style="font-family:var(--mono);">890 MB</td><td style="font-family:var(--mono);">210 MB</td><td><span class="badge badge-allow">Normal</span></td></tr>
+              <tr><td>192.168.30.7</td><td>aperez</td><td style="font-family:var(--mono);">5,988</td><td style="font-family:var(--mono);">670 MB</td><td style="font-family:var(--mono);">180 MB</td><td><span class="badge badge-warn">Cuota</span></td></tr>
+              <tr><td>192.168.14.2</td><td>rrodriguez</td><td style="font-family:var(--mono);">4,402</td><td style="font-family:var(--mono);">510 MB</td><td style="font-family:var(--mono);">120 MB</td><td><span class="badge badge-allow">Normal</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ LOGS Y REPORTES ════ -->
+    <div class="page" id="page-logs">
+      <div class="page-header">
+        <div><h1>Logs y Reportes</h1><p>Historial completo de navegación e intentos bloqueados</p></div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-ghost" id="export-csv-btn"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="13" height="13"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Exportar CSV</button>
+          <button class="btn btn-ghost" id="export-pdf-btn">Exportar PDF</button>
+        </div>
+      </div>
+
+      <div class="filter-row">
+        <input type="date" class="form-input" id="log-date-from" style="max-width:160px;" value="2025-05-05">
+        <input type="date" class="form-input" id="log-date-to" style="max-width:160px;" value="2025-05-05">
+        <input type="text" class="form-input" id="log-search" placeholder="Buscar IP, usuario o dominio…">
+        <select class="form-select" id="log-action-filter" style="max-width:150px;"><option>Todas las acciones</option><option>Bloqueado</option><option>Permitido</option><option>Advertencia</option><option>Cuota</option></select>
+        <select class="form-select" id="log-user-filter" style="max-width:150px;"><option>Todos los usuarios</option><option>jlopez</option><option>mgarcia</option><option>aperez</option><option>cmartinez</option><option>rrodriguez</option></select>
+        <button class="btn btn-primary" id="log-filter-btn">Filtrar</button>
+        <button class="btn btn-ghost" id="log-reset-btn">Limpiar</button>
+      </div>
+
+      <div class="card" style="margin-bottom:16px;">
+        <div class="table-tools">
+          <div class="card-title" style="margin-bottom:0;">Historial de navegación</div>
+          <div class="table-count" id="log-count">8 eventos visibles</div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Hora</th><th>Usuario / IP</th><th>URL</th><th>Categoría</th><th>Acción</th><th>Tamaño</th></tr></thead>
+            <tbody id="logs-table-body">
+              <tr><td style="font-family:var(--mono);color:var(--text3);">14:32:08</td><td>jlopez / .10.45</td><td>phish-login.ru/login</td><td>Phishing</td><td><span class="badge badge-block">Bloqueado</span></td><td style="font-family:var(--mono);">—</td></tr>
+              <tr><td style="font-family:var(--mono);color:var(--text3);">14:30:41</td><td>mgarcia / .22.18</td><td>github.com/repos</td><td>Tecnología</td><td><span class="badge badge-allow">Permitido</span></td><td style="font-family:var(--mono);">84 KB</td></tr>
+              <tr><td style="font-family:var(--mono);color:var(--text3);">14:29:15</td><td>aperez / .30.7</td><td>youtube.com/watch?v=…</td><td>Streaming</td><td><span class="badge badge-warn">Cuota</span></td><td style="font-family:var(--mono);">12 MB</td></tr>
+              <tr><td style="font-family:var(--mono);color:var(--text3);">14:27:03</td><td>cmartinez / .9.88</td><td>office365.com/mail</td><td>Productividad</td><td><span class="badge badge-allow">Permitido</span></td><td style="font-family:var(--mono);">210 KB</td></tr>
+              <tr><td style="font-family:var(--mono);color:var(--text3);">14:25:58</td><td>mgarcia / .22.18</td><td>cdn-dl.xyz/payload.exe</td><td>Malware</td><td><span class="badge badge-block">Bloqueado</span></td><td style="font-family:var(--mono);">—</td></tr>
+              <tr><td style="font-family:var(--mono);color:var(--text3);">14:24:11</td><td>rrodriguez / .14.2</td><td>teams.microsoft.com</td><td>Productividad</td><td><span class="badge badge-allow">Permitido</span></td><td style="font-family:var(--mono);">1.1 MB</td></tr>
+              <tr><td style="font-family:var(--mono);color:var(--text3);">14:22:44</td><td>jlopez / .10.45</td><td>casino-online.io</td><td>Juegos</td><td><span class="badge badge-block">Bloqueado</span></td><td style="font-family:var(--mono);">—</td></tr>
+              <tr><td style="font-family:var(--mono);color:var(--text3);">14:20:30</td><td>aperez / .30.7</td><td>instagram.com/feed</td><td>Redes sociales</td><td><span class="badge badge-warn">Advertencia</span></td><td style="font-family:var(--mono);">430 KB</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">Reportes por fecha</div>
+          <div class="form-group"><label class="form-label">Tipo de reporte</label><select class="form-select"><option>Resumen diario</option><option>Intentos bloqueados</option><option>Actividad por usuario</option><option>Consumo de ancho de banda</option></select></div>
+          <div class="form-group"><label class="form-label">Rango de fechas</label><div style="display:flex;gap:8px;"><input type="date" class="form-input" value="2025-05-01"><input type="date" class="form-input" value="2025-05-05"></div></div>
+          <div style="display:flex;gap:8px;"><button class="btn btn-primary">Generar reporte</button><button class="btn btn-ghost">Vista previa</button></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Resumen de bloqueos hoy</div>
+          <div style="position:relative;height:160px;"><canvas id="chartLogsDonut"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ CONFIG. AVANZADA ════ -->
+    <div class="page" id="page-avanzado">
+      <div class="page-header">
+        <div><h1>Configuración Avanzada</h1><p>Integración con módulos de seguridad adicionales</p></div>
+      </div>
+
+      <div class="grid-3" style="margin-bottom:16px;">
+        <div class="card">
+          <div class="card-title" style="color:var(--green);">Antivirus</div>
+          <div class="stat-row"><span class="stat-k">Estado</span><span class="stat-v" style="color:var(--green);">Activo</span></div>
+          <div class="stat-row"><span class="stat-k">Motor</span><span class="stat-v">FortiAV v6.4.1</span></div>
+          <div class="stat-row"><span class="stat-k">Última actualiz.</span><span class="stat-v">hace 2 h</span></div>
+          <div class="stat-row"><span class="stat-k">Archivos analizados</span><span class="stat-v">14,201 hoy</span></div>
+          <div class="stat-row"><span class="stat-k">Amenazas bloq.</span><span class="stat-v" style="color:var(--red);">23</span></div>
+          <div style="margin-top:12px;"><div class="toggle-wrap"><label class="switch"><input type="checkbox" checked><span class="slider"></span></label><span class="toggle-label">Escaneo en tiempo real</span></div></div>
+        </div>
+        <div class="card">
+          <div class="card-title" style="color:var(--accent2);">IDS / IPS</div>
+          <div class="stat-row"><span class="stat-k">Estado</span><span class="stat-v" style="color:var(--green);">Activo</span></div>
+          <div class="stat-row"><span class="stat-k">Firmas</span><span class="stat-v">18,741</span></div>
+          <div class="stat-row"><span class="stat-k">Intrusiones bloq.</span><span class="stat-v" style="color:var(--red);">7 hoy</span></div>
+          <div class="stat-row"><span class="stat-k">Modo</span><span class="stat-v">Prevención</span></div>
+          <div class="stat-row"><span class="stat-k">Severidad mínima</span><span class="stat-v">Media</span></div>
+          <div style="margin-top:12px;"><div class="toggle-wrap"><label class="switch"><input type="checkbox" checked><span class="slider"></span></label><span class="toggle-label">Bloqueo automático</span></div></div>
+        </div>
+        <div class="card">
+          <div class="card-title" style="color:var(--amber);">DNS Filtering</div>
+          <div class="stat-row"><span class="stat-k">Estado</span><span class="stat-v" style="color:var(--green);">Activo</span></div>
+          <div class="stat-row"><span class="stat-k">Servidor DNS</span><span class="stat-v">8.8.8.8 / 1.1.1.1</span></div>
+          <div class="stat-row"><span class="stat-k">DoH filtrado</span><span class="stat-v" style="color:var(--green);">Sí</span></div>
+          <div class="stat-row"><span class="stat-k">Consultas hoy</span><span class="stat-v">248,901</span></div>
+          <div class="stat-row"><span class="stat-k">DNS bloqueados</span><span class="stat-v" style="color:var(--red);">4,201</span></div>
+          <div style="margin-top:12px;"><div class="toggle-wrap"><label class="switch"><input type="checkbox" checked><span class="slider"></span></label><span class="toggle-label">Filtrado DoH activo</span></div></div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">Configuración de alertas</div>
+          <div class="form-group"><label class="form-label">Umbral de alertas de malware</label><select class="form-select"><option>Cualquier detección</option><option>Severidad media o alta</option><option>Solo severidad alta</option></select></div>
+          <div class="form-group"><label class="form-label">Notificar vía</label><select class="form-select"><option>Correo electrónico</option><option>Syslog</option><option>SNMP Trap</option><option>Webhook</option></select></div>
+          <div class="form-group"><label class="form-label">Email de alertas</label><input type="email" class="form-input" value="soc@empresa.com"></div>
+          <div style="display:flex;gap:8px;"><button class="btn btn-primary">Guardar</button><button class="btn btn-ghost">Probar alerta</button></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Opciones adicionales</div>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div class="toggle-wrap"><label class="switch"><input type="checkbox" checked><span class="slider"></span></label><span class="toggle-label">Inspección SSL profunda (HTTPS)</span></div>
+            <div class="toggle-wrap"><label class="switch"><input type="checkbox" checked><span class="slider"></span></label><span class="toggle-label">Bloqueo de certificados inválidos</span></div>
+            <div class="toggle-wrap"><label class="switch"><input type="checkbox" checked><span class="slider"></span></label><span class="toggle-label">Bloqueo de TLS 1.0 / 1.1</span></div>
+            <div class="toggle-wrap"><label class="switch"><input type="checkbox"><span class="slider"></span></label><span class="toggle-label">Modo solo auditoría global</span></div>
+            <div class="toggle-wrap"><label class="switch"><input type="checkbox" checked><span class="slider"></span></label><span class="toggle-label">Registrar todas las URLs visitadas</span></div>
+            <div class="toggle-wrap"><label class="switch"><input type="checkbox" checked><span class="slider"></span></label><span class="toggle-label">Override autenticado por admin</span></div>
+          </div>
+          <button class="btn btn-primary" style="margin-top:16px;">Aplicar cambios</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ FORTIGUARD ════ -->
+    <div class="page" id="page-fortiguard">
+      <div class="page-header">
+        <div><h1>Base de datos FortiGuard</h1><p>Estado del servicio de inteligencia de amenazas</p></div>
+        <button class="btn btn-primary">Actualizar ahora</button>
+      </div>
+      <div class="metrics-row">
+        <div class="metric m-green"><div class="metric-label">Versión actual</div><div class="metric-val" style="font-size:18px;">v17.43.2</div><div class="metric-delta"><span class="delta-up">●</span> Al día</div></div>
+        <div class="metric m-blue"><div class="metric-label">Categorías activas</div><div class="metric-val">90</div><div class="metric-delta">de 90 disponibles</div></div>
+        <div class="metric m-amber"><div class="metric-label">URLs en caché</div><div class="metric-val">124K</div><div class="metric-delta">en DNS local</div></div>
+        <div class="metric m-green"><div class="metric-label">Licencia</div><div class="metric-val" style="font-size:18px;">248 días</div><div class="metric-delta"><span class="delta-up">●</span> Vigente</div></div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">Estado del servicio</div>
+          <div class="stat-row"><span class="stat-k">Última sincronización</span><span class="stat-v">hace 12 min</span></div>
+          <div class="stat-row"><span class="stat-k">Servidor FortiGuard</span><span class="stat-v">service.fortiguard.net</span></div>
+          <div class="stat-row"><span class="stat-k">Modo de inspección</span><span class="stat-v">HTTPS deep scan</span></div>
+          <div class="stat-row"><span class="stat-k">SafeSearch</span><span class="stat-v" style="color:var(--green);">Activo</span></div>
+          <div class="stat-row"><span class="stat-k">YouTube for Schools</span><span class="stat-v" style="color:var(--green);">Activo</span></div>
+          <div class="stat-row"><span class="stat-k">Override autenticado</span><span class="stat-v" style="color:var(--green);">Habilitado</span></div>
+          <div class="stat-row"><span class="stat-k">Intervalo de actualiz.</span><span class="stat-v">Cada 30 min</span></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Configuración de inspección</div>
+          <div style="margin-bottom:14px;display:flex;flex-direction:column;gap:10px;">
+            <div class="toggle-wrap"><label class="switch"><input type="checkbox" checked><span class="slider"></span></label><span class="toggle-label">Inspección SSL/HTTPS activa</span></div>
+            <div class="toggle-wrap"><label class="switch"><input type="checkbox" checked><span class="slider"></span></label><span class="toggle-label">Bloqueo de certificados inválidos</span></div>
+            <div class="toggle-wrap"><label class="switch"><input type="checkbox" checked><span class="slider"></span></label><span class="toggle-label">Filtrado DNS-over-HTTPS</span></div>
+            <div class="toggle-wrap"><label class="switch"><input type="checkbox"><span class="slider"></span></label><span class="toggle-label">Modo solo auditoría (sin bloqueo)</span></div>
+            <div class="toggle-wrap"><label class="switch"><input type="checkbox" checked><span class="slider"></span></label><span class="toggle-label">Registro de URLs visitadas</span></div>
+          </div>
+          <button class="btn btn-primary">Aplicar cambios</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ AJUSTES ════ -->
+    <div class="page" id="page-ajustes">
+      <div class="page-header">
+        <div><h1>Ajustes del sistema</h1><p>Configuración general del módulo de filtrado web</p></div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">Información del dispositivo</div>
+          <div class="stat-row"><span class="stat-k">Modelo</span><span class="stat-v">FortiGate 200F</span></div>
+          <div class="stat-row"><span class="stat-k">FortiOS</span><span class="stat-v">7.4.3 build 2573</span></div>
+          <div class="stat-row"><span class="stat-k">Número de serie</span><span class="stat-v">FG200F3G18123456</span></div>
+          <div class="stat-row"><span class="stat-k">Interfaces activas</span><span class="stat-v">8 de 10</span></div>
+          <div class="stat-row"><span class="stat-k">Uptime</span><span class="stat-v">47 días 12 h 34 min</span></div>
+          <div class="stat-row"><span class="stat-k">CPU</span><span class="stat-v">23%</span></div>
+          <div class="stat-row"><span class="stat-k">Memoria</span><span class="stat-v">4.2 / 16 GB</span></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Notificaciones y alertas</div>
+          <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px;">
+            <div class="toggle-wrap"><label class="switch"><input type="checkbox" checked><span class="slider"></span></label><span class="toggle-label">Alertas por correo electrónico</span></div>
+            <div class="toggle-wrap"><label class="switch"><input type="checkbox" checked><span class="slider"></span></label><span class="toggle-label">Alertas críticas de malware</span></div>
+            <div class="toggle-wrap"><label class="switch"><input type="checkbox"><span class="slider"></span></label><span class="toggle-label">Resumen diario por email</span></div>
+            <div class="toggle-wrap"><label class="switch"><input type="checkbox" checked><span class="slider"></span></label><span class="toggle-label">Notificar al usuario bloqueado</span></div>
+          </div>
+          <div class="form-group"><label class="form-label">Email de notificaciones</label><input type="email" class="form-input" value="soc@empresa.com"></div>
+          <button class="btn btn-primary">Guardar ajustes</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ AYUDA ════ -->
+    <div class="page" id="page-ayuda">
+      <div class="page-header">
+        <div><h1>Ayuda y Documentación</h1><p>Guía de uso, conceptos y buenas prácticas</p></div>
+      </div>
+
+      <div class="info-box" style="margin-bottom:20px;">
+        <div class="info-box-title">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          Guía rápida de FortiGate Web Filter
+        </div>
+        <p>Este dashboard permite gestionar el filtrado web de tu organización desde un único panel. Navega por las secciones del menú lateral para configurar políticas, monitorear tráfico, gestionar usuarios y revisar logs.</p>
+      </div>
+
+      <div class="grid-3" style="margin-bottom:16px;">
+        <div class="concept-card">
+          <div class="concept-icon">🔒</div>
+          <div class="concept-title">¿Qué es el filtrado web?</div>
+          <div class="concept-body">Tecnología que controla qué sitios web pueden ser accedidos desde una red. FortiGate analiza cada solicitud HTTP/HTTPS y decide si permitirla, bloquearla o registrarla según las políticas configuradas.</div>
+        </div>
+        <div class="concept-card">
+          <div class="concept-icon">🛡️</div>
+          <div class="concept-title">¿Para qué sirve?</div>
+          <div class="concept-body"><strong style="color:var(--text);">Seguridad:</strong> bloquea malware, phishing y C&C.<br><strong style="color:var(--text);">Productividad:</strong> limita acceso a redes sociales y juegos.<br><strong style="color:var(--text);">Cumplimiento:</strong> evita contenido ilegal o inapropiado en la red corporativa.</div>
+        </div>
+        <div class="concept-card">
+          <div class="concept-icon">⚙️</div>
+          <div class="concept-title">¿Cómo funciona en FortiGate?</div>
+          <div class="concept-body">1. El usuario hace una solicitud web.<br>2. FortiGate intercepta el tráfico.<br>3. Consulta la base de datos FortiGuard.<br>4. Aplica la política correspondiente.<br>5. Bloquea, permite o registra la solicitud.</div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">Módulos del sistema</div>
+          <div class="event"><div class="ev-dot ev-blue"></div><div><div class="ev-main">Inicio</div><div class="ev-meta">Resumen general del sistema, métricas clave y eventos recientes.</div></div></div>
+          <div class="event"><div class="ev-dot ev-blue"></div><div><div class="ev-main">Filtrado Web</div><div class="ev-meta">Activar/desactivar filtrado, tipos de filtrado y perfiles disponibles.</div></div></div>
+          <div class="event"><div class="ev-dot ev-blue"></div><div><div class="ev-main">Usuarios</div><div class="ev-meta">Gestión de usuarios, asignación de perfiles y políticas por perfil.</div></div></div>
+          <div class="event"><div class="ev-dot ev-blue"></div><div><div class="ev-main">Políticas</div><div class="ev-meta">Reglas de control con acciones: Permitir, Bloquear, Monitorear.</div></div></div>
+          <div class="event"><div class="ev-dot ev-blue"></div><div><div class="ev-main">Categorías</div><div class="ev-meta">90 categorías FortiGuard configurables individualmente.</div></div></div>
+          <div class="event"><div class="ev-dot ev-blue"></div><div><div class="ev-main">Monitoreo</div><div class="ev-meta">Tráfico en tiempo real, IPs activas y ancho de banda.</div></div></div>
+          <div class="event"><div class="ev-dot ev-blue"></div><div><div class="ev-main">Logs y Reportes</div><div class="ev-meta">Historial completo con filtros por fecha, usuario y tipo de tráfico.</div></div></div>
+          <div class="event"><div class="ev-dot ev-blue"></div><div><div class="ev-main">Config. Avanzada</div><div class="ev-meta">Antivirus, IDS/IPS, DNS filtering y configuración de alertas.</div></div></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Buenas prácticas</div>
+          <div class="event"><div class="ev-dot ev-green"></div><div><div class="ev-main">Mantén FortiGuard actualizado</div><div class="ev-meta">Sincroniza la base de datos cada 30 minutos para protección contra amenazas nuevas.</div></div></div>
+          <div class="event"><div class="ev-dot ev-green"></div><div><div class="ev-main">Usa perfiles diferenciados</div><div class="ev-meta">No apliques la misma política a administradores e invitados. Segmenta por rol.</div></div></div>
+          <div class="event"><div class="ev-dot ev-green"></div><div><div class="ev-main">Revisa los logs diariamente</div><div class="ev-meta">Los intentos bloqueados revelan patrones de amenazas internas o externas.</div></div></div>
+          <div class="event"><div class="ev-dot ev-green"></div><div><div class="ev-main">Habilita inspección SSL</div><div class="ev-meta">El tráfico HTTPS cifrado también puede contener malware. Usa deep scan.</div></div></div>
+          <div class="event"><div class="ev-dot ev-green"></div><div><div class="ev-main">Configura alertas de malware</div><div class="ev-meta">Recibe notificaciones inmediatas ante cualquier detección crítica.</div></div></div>
+          <div class="event"><div class="ev-dot ev-amber"></div><div><div class="ev-main">Precaución con listas blancas</div><div class="ev-meta">Cada excepción es una posible vulnerabilidad. Revisa y justifica cada entrada.</div></div></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+</div><!-- /dashboard-wrap -->
+
+<div class="toast-stack" id="toast-stack" aria-live="polite"></div>
+
+<script>
+  // ─── NAVEGACIÓN ───
+  const navItems = document.querySelectorAll('.nav-item[data-page]');
+  const pages = document.querySelectorAll('.page');
+  const topbarTitle = document.getElementById('topbar-title');
+  const titles = {
+    inicio:'Inicio', filtrado:'Filtrado Web', usuarios:'Usuarios y Perfiles',
+    alertas:'Alertas', politicas:'Políticas', categorias:'Categorías',
+    listas:'Listas URL', cuotas:'Cuotas', trafico:'Monitoreo de Tráfico',
+    logs:'Logs y Reportes', avanzado:'Config. Avanzada',
+    fortiguard:'FortiGuard DB', ajustes:'Ajustes', ayuda:'Ayuda'
+  };
+  const moduleInsights = {
+    inicio: {
+      title: 'Lectura experta',
+      chip: 'Vista ejecutiva',
+      body: 'Este panel sirve para evaluar la salud general del filtrado web: volumen de tráfico, bloqueos, usuarios activos y alertas críticas. Úsalo como primera parada para decidir si hay que investigar, ajustar políticas o validar que FortiGuard esté sincronizado.',
+      actions: ['Revisar picos de tráfico contra el horario laboral', 'Priorizar alertas críticas antes de cambios de política', 'Comparar bloqueos de hoy contra el promedio semanal']
+    },
+    filtrado: {
+      title: 'Uso del módulo',
+      chip: 'Motor de control',
+      body: 'Aquí se administra el comportamiento central del filtrado HTTP/HTTPS. Sirve para activar o pausar inspección, aplicar categorías FortiGuard, controlar listas URL, forzar SafeSearch y definir si el entorno bloquea o solo audita.',
+      actions: ['Validar que SSL inspection esté activo en segmentos críticos', 'Evitar modo auditoría salvo en pruebas controladas', 'Revisar perfiles antes de desactivar el filtrado global']
+    },
+    usuarios: {
+      title: 'Lectura de identidad',
+      chip: 'Usuarios y perfiles',
+      body: 'Este panel relaciona usuarios, IPs, perfiles y consumo. Úsalo para detectar usuarios con demasiados bloqueos, asignar políticas por rol y separar administradores, invitados y BYOD con niveles distintos de restricción.',
+      actions: ['Filtrar por IP cuando investigues un host concreto', 'Mover usuarios recurrentes a un perfil más restrictivo', 'Auditar invitados con alto consumo o categorías bloqueadas']
+    },
+    alertas: {
+      title: 'Respuesta operativa',
+      chip: 'Cola SOC',
+      body: 'Las alertas concentran eventos que requieren decisión: malware, phishing, cuotas agotadas o servicios pendientes. Sirve para priorizar, documentar acciones y reducir tiempo de respuesta.',
+      actions: ['Atender primero severidad crítica', 'Bloquear hosts con descargas maliciosas recurrentes', 'Registrar acciones para auditoría posterior']
+    },
+    politicas: {
+      title: 'Gobierno de reglas',
+      chip: 'Orden y prioridad',
+      body: 'Las políticas definen quién puede acceder a qué, con qué acción y bajo qué condiciones. Úsalo para ordenar reglas, revisar hits, evitar excepciones amplias y asegurar que las reglas críticas estén por encima de las generales.',
+      actions: ['Mantener whitelist corporativa arriba de reglas generales', 'Desactivar políticas de prueba fuera de laboratorio', 'Revisar reglas sin hits antes de eliminarlas']
+    },
+    categorias: {
+      title: 'Mapa de riesgo',
+      chip: 'FortiGuard',
+      body: 'Las categorías agrupan sitios por tipo de contenido y riesgo. Este panel sirve para decidir qué se bloquea, permite, monitorea o limita por cuota según seguridad, productividad y cumplimiento.',
+      actions: ['Bloquear malware, phishing, proxy y C&C sin excepción', 'Monitorear nube y repositorios según rol', 'Aplicar cuotas a categorías de productividad baja']
+    },
+    listas: {
+      title: 'Excepciones URL',
+      chip: 'Whitelist / blacklist',
+      body: 'Las listas permiten control preciso por dominio o patrón. Úsalas para aprobar servicios corporativos, bloquear indicadores de compromiso y documentar quién agregó cada excepción.',
+      actions: ['Revisar listas blancas mensualmente', 'Eliminar dominios temporales caducados', 'Agregar motivo y responsable a cada entrada']
+    },
+    cuotas: {
+      title: 'Control de tiempo',
+      chip: 'Productividad',
+      body: 'Las cuotas limitan minutos diarios por categoría o grupo. Sirven para balancear acceso permitido con control de abuso, especialmente en streaming, redes sociales y juegos.',
+      actions: ['Ajustar límites por grupo y horario', 'Detectar usuarios cerca del límite diario', 'Separar cuotas de invitados y usuarios internos']
+    },
+    trafico: {
+      title: 'Observabilidad',
+      chip: 'Tiempo real',
+      body: 'Monitoreo muestra solicitudes, ancho de banda, dominios activos e IPs con mayor consumo. Úsalo para identificar anomalías, saturación, abuso de streaming o hosts con comportamiento sospechoso.',
+      actions: ['Ordenar por consumo para detectar abuso', 'Cruzar dominios bloqueados con usuarios afectados', 'Revisar picos con logs del mismo periodo']
+    },
+    logs: {
+      title: 'Trazabilidad',
+      chip: 'Evidencia',
+      body: 'Logs y reportes guardan el historial de navegación, bloqueos y advertencias. Este panel sirve para auditorías, investigación de incidentes y exportación de evidencia filtrada.',
+      actions: ['Filtrar por usuario, IP o dominio antes de exportar', 'Exportar CSV solo con eventos visibles', 'Usar rangos de fechas en investigaciones formales']
+    },
+    avanzado: {
+      title: 'Defensa profunda',
+      chip: 'UTM',
+      body: 'Configuración avanzada integra antivirus, IDS/IPS, DNS filtering, inspección SSL y alertas. Úsalo para reforzar capas de seguridad alrededor del filtrado web.',
+      actions: ['Mantener antivirus e IPS activos', 'Bloquear DNS-over-HTTPS no autorizado', 'Probar alertas después de cambiar correos']
+    },
+    fortiguard: {
+      title: 'Inteligencia de amenazas',
+      chip: 'Base FortiGuard',
+      body: 'FortiGuard entrega clasificación de URLs, reputación y firmas. Este panel sirve para validar sincronización, licencia, categorías disponibles y caché local.',
+      actions: ['Actualizar si la sincronización supera 30 minutos', 'Verificar licencia antes de auditorías', 'Revisar latencia si hay demoras de navegación']
+    },
+    ajustes: {
+      title: 'Administración del sistema',
+      chip: 'Operación',
+      body: 'Ajustes concentra información del dispositivo, notificaciones, versión, recursos y parámetros generales. Úsalo para mantener el panel operativo y preparado para alertas.',
+      actions: ['Validar correo de notificaciones', 'Revisar CPU y memoria antes de cambios grandes', 'Documentar versión FortiOS y número de serie']
+    },
+    ayuda: {
+      title: 'Guía de operación',
+      chip: 'Referencia',
+      body: 'Ayuda resume conceptos, módulos y buenas prácticas. Sirve para explicar el flujo de trabajo, capacitar usuarios técnicos y estandarizar decisiones de filtrado web.',
+      actions: ['Usar como checklist de buenas prácticas', 'Consultar módulos antes de cambios sensibles', 'Documentar criterios de bloqueo y excepción']
+    }
+  };
+
+  function showToast(title, body, type = 'success') {
+    const stack = document.getElementById('toast-stack');
+    const toast = document.createElement('div');
+    toast.className = 'toast ' + type;
+    toast.innerHTML = '<div class="toast-title">' + title + '</div><div class="toast-body">' + body + '</div>';
+    stack.appendChild(toast);
+    setTimeout(() => toast.remove(), 3200);
+  }
+
+  function buildModuleInsight(target) {
+    const page = document.getElementById('page-' + target);
+    const data = moduleInsights[target];
+    if (!page || !data || page.querySelector('.module-insight')) return;
+    const header = page.querySelector('.page-header');
+    const insight = document.createElement('div');
+    insight.className = 'module-insight';
+    insight.innerHTML = `
+      <div class="module-insight-head">
+        <div class="module-insight-title">${data.title}</div>
+        <div class="module-insight-chip">${data.chip}</div>
+      </div>
+      <div class="module-insight-body">${data.body}</div>
+      <div class="module-insight-actions">
+        ${data.actions.map((item, index) => `
+          <div class="module-action">
+            <div class="module-action-k">Paso ${index + 1}</div>
+            <div class="module-action-v">${item}</div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+    header?.insertAdjacentElement('afterend', insight);
+  }
+
+  Object.keys(moduleInsights).forEach(buildModuleInsight);
+
+  function openPage(target) {
+    const page = document.getElementById('page-' + target);
+    if (!page) return;
+    navItems.forEach(n => n.classList.toggle('active', n.dataset.page === target));
+    pages.forEach(p => p.classList.remove('active'));
+    page.classList.add('active');
+    topbarTitle.textContent = titles[target] || '';
+    const status = document.getElementById('service-status-text');
+    if (status && moduleInsights[target]) status.textContent = moduleInsights[target].chip;
+    setTimeout(() => {
+      document.querySelectorAll('canvas').forEach(canvas => Chart.getChart(canvas)?.resize());
+    }, 80);
+  }
+
+  navItems.forEach(item => {
+    item.addEventListener('click', () => openPage(item.dataset.page));
+  });
+
+  function updateClock() {
+    const clock = document.getElementById('soc-clock');
+    if (!clock) return;
+    clock.textContent = new Date().toLocaleTimeString('es-PE', { hour12: false });
+  }
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  const globalSearch = document.getElementById('global-search');
+  const searchTargets = {
+    log: 'logs', logs: 'logs', reporte: 'logs', csv: 'logs',
+    usuario: 'usuarios', ip: 'usuarios', perfil: 'usuarios',
+    trafico: 'trafico', ancho: 'trafico', dominio: 'trafico',
+    politica: 'politicas', categoria: 'categorias', cuota: 'cuotas',
+    fortiguard: 'fortiguard', ajuste: 'ajustes', ayuda: 'ayuda',
+    filtro: 'filtrado', filtrado: 'filtrado', url: 'listas'
+  };
+  globalSearch?.addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    const query = globalSearch.value.trim().toLowerCase();
+    if (!query) return;
+    const match = Object.keys(searchTargets).find(key => query.includes(key));
+    if (match) {
+      openPage(searchTargets[match]);
+      showToast('Búsqueda global', 'Se abrió el módulo relacionado con "' + query + '".');
+      globalSearch.value = '';
+    } else {
+      showToast('Sin coincidencias', 'No encontré un módulo directo para "' + query + '".', 'warn');
+    }
+  });
+
+  document.getElementById('logs-shortcut')?.addEventListener('click', () => openPage('logs'));
+
+  document.addEventListener('wheel', e => {
+    const dashboardVisible = document.getElementById('dashboard-wrap')?.classList.contains('visible');
+    const content = document.getElementById('content');
+    if (!dashboardVisible || !content) return;
+    if (e.target.closest('#sidebar, .sidebar-body, input, select, textarea')) return;
+    e.preventDefault();
+    content.scrollTop += e.deltaY;
+  }, { passive: false });
+
+  // ─── SIDEBAR TOGGLE ───
+  document.getElementById('toggle-btn').addEventListener('click', () => {
+    document.getElementById('sidebar').classList.toggle('collapsed');
+  });
+
+  // ─── REFRESH ───
+  document.getElementById('refresh-btn').addEventListener('click', function() {
+    this.style.opacity = '0.5';
+    const blocks = document.getElementById('blocks-per-minute');
+    const lastSync = document.getElementById('last-sync-value');
+    if (blocks) blocks.innerHTML = (38 + Math.floor(Math.random() * 12)) + ' <span class="ops-note">prom. 5 min</span>';
+    if (lastSync) lastSync.innerHTML = 'ahora <span class="ops-note">FortiGuard</span>';
+    setTimeout(() => {
+      this.style.opacity = '1';
+      showToast('Datos actualizados', 'Métricas, widgets y estado operativo sincronizados.');
+    }, 800);
+  });
+
+  // ─── TOGGLE FILTRADO ACTIVO/INACTIVO ───
+  const btnToggle = document.getElementById('btn-toggle-filtrado');
+  const estadoBadge = document.getElementById('filtrado-estado');
+  const swGlobal = document.getElementById('sw-global');
+  let filtradoActivo = true;
+  btnToggle.addEventListener('click', () => {
+    filtradoActivo = !filtradoActivo;
+    if (filtradoActivo) {
+      estadoBadge.textContent = '● Filtrado ACTIVO';
+      estadoBadge.className = 'badge badge-allow';
+      btnToggle.textContent = 'Desactivar filtrado';
+      btnToggle.className = 'btn btn-danger';
+      swGlobal.checked = true;
+    } else {
+      estadoBadge.textContent = '● Filtrado INACTIVO';
+      estadoBadge.className = 'badge badge-block';
+      btnToggle.textContent = 'Activar filtrado';
+      btnToggle.className = 'btn btn-success';
+      swGlobal.checked = false;
+    }
+  });
+
+  // ─── CHART CONFIG ───
+  const chartDefaults = {
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { color: 'rgba(48,54,61,0.5)' }, ticks: { font: { size: 10, family: "'IBM Plex Mono'" }, color: '#6e7681' } },
+      y: { grid: { color: 'rgba(48,54,61,0.5)' }, ticks: { font: { size: 10, family: "'IBM Plex Mono'" }, color: '#6e7681', callback: v => v >= 1000 ? (v/1000).toFixed(0)+'k' : v } }
+    }
+  };
+
+  // ─── CHART INICIO (barra por hora) ───
+  const hours = ['00','02','04','06','08','10','12','14','16','18','20','22'];
+  const allowed = [1200,800,600,900,4200,8800,9100,8600,7200,5100,3400,2100];
+  const blocked = [80,40,30,60,320,710,840,780,620,410,280,190];
+  new Chart(document.getElementById('chartTraficoInicio'), {
+    type: 'bar',
+    data: {
+      labels: hours,
+      datasets: [
+        { label: 'Permitidas', data: allowed, backgroundColor: 'rgba(0,255,132,0.18)', borderColor: '#00ff84', borderWidth: 1 },
+        { label: 'Bloqueadas', data: blocked, backgroundColor: 'rgba(248,81,73,0.25)', borderColor: '#f85149', borderWidth: 1 }
+      ]
+    },
+    options: { responsive: true, maintainAspectRatio: false, ...chartDefaults }
+  });
+
+  // ─── CHART DONUT INICIO ───
+  new Chart(document.getElementById('chartDonut'), {
+    type: 'doughnut',
+    data: { labels: ['Permitidas','Bloqueadas','Advertencias'], datasets: [{ data: [92,7,1], backgroundColor: ['#00ff84','#f85149','#d29922'], borderWidth: 0, hoverOffset: 3 }] },
+    options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { display: false } } }
+  });
+
+  // ─── CHART MONITOREO 24H ───
+  const hours24 = Array.from({length:24}, (_,i) => i.toString().padStart(2,'0')+'h');
+  const data24 = [900,600,400,300,250,400,1200,3800,7200,8800,8100,8600,7900,7200,6800,7100,6400,5200,4800,4100,3200,2400,1800,1200];
+  const block24 = data24.map(v => Math.round(v * 0.07));
+  new Chart(document.getElementById('chartTrafico24'), {
+    type: 'line',
+    data: {
+      labels: hours24,
+      datasets: [
+        { label: 'Permitidas', data: data24, borderColor: '#00ff84', backgroundColor: 'rgba(0,255,132,0.08)', fill: true, tension: 0.4, pointRadius: 0, borderWidth: 2 },
+        { label: 'Bloqueadas', data: block24, borderColor: '#f85149', backgroundColor: 'rgba(248,81,73,0.08)', fill: true, tension: 0.4, pointRadius: 0, borderWidth: 2 }
+      ]
+    },
+    options: { responsive: true, maintainAspectRatio: false, ...chartDefaults }
+  });
+
+  // ─── CHART LOGS DONUT ───
+  new Chart(document.getElementById('chartLogsDonut'), {
+    type: 'doughnut',
+    data: { labels: ['Malware','Phishing','P2P','Adultos','Proxy','Juegos'], datasets: [{ data: [32,28,18,10,7,5], backgroundColor: ['#f85149','#d29922','#6e7681','#a371f7','#00ff84','#35ffa0'], borderWidth: 0 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false, cutout: '60%',
+      plugins: { legend: { display: true, position: 'right', labels: { color: '#8b949e', font: { size: 11, family: "'IBM Plex Mono'" }, boxWidth: 10, padding: 8 } } }
+    }
+  });
+
+  // ─── EXTRA CHARTS BY MODULE ───
+  const chartPalette = ['#00ff84', '#35ffa0', '#f85149', '#d29922', '#a371f7', '#6e7681'];
+  const compactChartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: true, labels: { color: '#a8b9b0', font: { size: 10, family: "'IBM Plex Mono'" }, boxWidth: 10, padding: 8 } }
+    },
+    scales: {
+      x: { grid: { color: 'rgba(0,255,132,0.07)' }, ticks: { color: '#6f8379', font: { size: 10, family: "'IBM Plex Mono'" } } },
+      y: { grid: { color: 'rgba(0,255,132,0.07)' }, ticks: { color: '#6f8379', font: { size: 10, family: "'IBM Plex Mono'" } } }
+    }
+  };
+
+  function addChartCard(pageId, title, canvasId) {
+    const page = document.getElementById(pageId);
+    if (!page || document.getElementById(canvasId)) return null;
+    let grid = page.querySelector('.module-chart-grid');
+    if (!grid) {
+      grid = document.createElement('div');
+      grid.className = 'grid-2 module-chart-grid';
+      grid.style.marginTop = '16px';
+      page.appendChild(grid);
+    }
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = '<div class="card-title">' + title + '</div><div style="position:relative;height:210px;"><canvas id="' + canvasId + '"></canvas></div>';
+    grid.appendChild(card);
+    return document.getElementById(canvasId);
+  }
+
+  function makeModuleChart(pageId, title, canvasId, type, data, options = {}) {
+    const canvas = addChartCard(pageId, title, canvasId);
+    if (!canvas) return;
+    new Chart(canvas, {
+      type,
+      data,
+      options: {
+        ...compactChartOptions,
+        ...options,
+        plugins: { ...compactChartOptions.plugins, ...(options.plugins || {}) },
+        scales: options.scales === false ? undefined : { ...compactChartOptions.scales, ...(options.scales || {}) }
+      }
+    });
+  }
+
+  makeModuleChart('page-filtrado', 'Efectividad del filtrado por hora', 'chartFiltradoEfectividad', 'line', {
+    labels: ['08h','10h','12h','14h','16h','18h'],
+    datasets: [
+      { label: 'Permitidas', data: [82, 88, 91, 89, 93, 92], borderColor: '#00ff84', backgroundColor: 'rgba(0,255,132,0.08)', fill: true, tension: 0.35 },
+      { label: 'Bloqueadas', data: [9, 7, 6, 8, 5, 6], borderColor: '#f85149', backgroundColor: 'rgba(248,81,73,0.08)', fill: true, tension: 0.35 }
+    ]
+  });
+  makeModuleChart('page-filtrado', 'Uso por tipo de regla', 'chartFiltradoReglas', 'bar', {
+    labels: ['Categoría','URL','Usuario','Cuota','SSL'],
+    datasets: [{ label: 'Aplicaciones', data: [90, 47, 5, 12, 8], backgroundColor: chartPalette }]
+  });
+
+  makeModuleChart('page-usuarios', 'Actividad por perfil', 'chartUsuariosPerfil', 'doughnut', {
+    labels: ['Estándar','BYOD','Admin','Invitados','Test'],
+    datasets: [{ data: [290, 88, 18, 52, 5], backgroundColor: chartPalette, borderWidth: 0 }]
+  }, { cutout: '62%', scales: false });
+  makeModuleChart('page-usuarios', 'Solicitudes por usuario', 'chartUsuariosSolicitudes', 'bar', {
+    labels: ['jlopez','mgarcia','aperez','rrodriguez','cmartinez'],
+    datasets: [{ label: 'Solicitudes', data: [8201, 6714, 5988, 4402, 3987], backgroundColor: 'rgba(0,255,132,0.42)', borderColor: '#00ff84', borderWidth: 1 }]
+  });
+
+  makeModuleChart('page-alertas', 'Severidad de alertas', 'chartAlertasSeveridad', 'doughnut', {
+    labels: ['Crítica','Media','Informativa'],
+    datasets: [{ data: [1, 1, 1], backgroundColor: ['#f85149', '#d29922', '#00ff84'], borderWidth: 0 }]
+  }, { cutout: '65%', scales: false });
+  makeModuleChart('page-alertas', 'Alertas por hora', 'chartAlertasHora', 'line', {
+    labels: ['09h','10h','11h','12h','13h','14h'],
+    datasets: [{ label: 'Alertas', data: [0, 1, 1, 2, 2, 3], borderColor: '#d29922', backgroundColor: 'rgba(210,153,34,0.1)', fill: true, tension: 0.35 }]
+  });
+
+  makeModuleChart('page-politicas', 'Hits por política', 'chartPoliticasHits', 'bar', {
+    labels: ['Whitelist','General','BYOD','Cuotas','Admins','Test'],
+    datasets: [{ label: 'Hits', data: [342, 312, 88, 290, 18, 5], backgroundColor: chartPalette }]
+  });
+  makeModuleChart('page-politicas', 'Acciones configuradas', 'chartPoliticasAcciones', 'polarArea', {
+    labels: ['Permitir','Bloquear','Monitor','Cuota'],
+    datasets: [{ data: [47, 69, 20, 5], backgroundColor: ['rgba(0,255,132,0.65)','rgba(248,81,73,0.65)','rgba(53,255,160,0.45)','rgba(210,153,34,0.65)'] }]
+  }, { scales: false });
+
+  makeModuleChart('page-categorias', 'Categorías por acción', 'chartCategoriasAccion', 'bar', {
+    labels: ['Bloquear','Permitir','Monitor','Cuota'],
+    datasets: [{ label: 'Categorías', data: [35, 42, 8, 5], backgroundColor: ['#f85149','#00ff84','#35ffa0','#d29922'] }]
+  });
+  makeModuleChart('page-categorias', 'Riesgo por familia', 'chartCategoriasRiesgo', 'radar', {
+    labels: ['Seguridad','Productividad','Legal','Tecnología','Educación'],
+    datasets: [{ label: 'Riesgo', data: [92, 58, 85, 38, 18], borderColor: '#00ff84', backgroundColor: 'rgba(0,255,132,0.12)', pointBackgroundColor: '#00ff84' }]
+  });
+
+  makeModuleChart('page-listas', 'Crecimiento de listas', 'chartListasCrecimiento', 'line', {
+    labels: ['Ene','Feb','Mar','Abr','May'],
+    datasets: [
+      { label: 'Blanca', data: [28, 32, 39, 44, 47], borderColor: '#00ff84', backgroundColor: 'rgba(0,255,132,0.08)', fill: true, tension: 0.35 },
+      { label: 'Negra', data: [11, 14, 18, 21, 23], borderColor: '#f85149', backgroundColor: 'rgba(248,81,73,0.08)', fill: true, tension: 0.35 }
+    ]
+  });
+  makeModuleChart('page-listas', 'Motivos en lista negra', 'chartListasMotivos', 'doughnut', {
+    labels: ['Phishing','Malware','P2P','Juegos','Proxy'],
+    datasets: [{ data: [8, 6, 4, 3, 2], backgroundColor: ['#d29922','#f85149','#6e7681','#a371f7','#35ffa0'], borderWidth: 0 }]
+  }, { cutout: '60%', scales: false });
+
+  makeModuleChart('page-cuotas', 'Consumo de cuota por categoría', 'chartCuotasConsumo', 'bar', {
+    labels: ['Social','Streaming','Juegos','Foros','Noticias'],
+    datasets: [{ label: 'Min usados', data: [23, 33, 19, 9, 6], backgroundColor: ['#00ff84','#35ffa0','#f85149','#a371f7','#6e7681'] }]
+  });
+  makeModuleChart('page-cuotas', 'Usuarios cerca del límite', 'chartCuotasLimite', 'line', {
+    labels: ['08h','10h','12h','14h','16h','18h'],
+    datasets: [{ label: 'Usuarios', data: [4, 11, 19, 31, 47, 52], borderColor: '#d29922', backgroundColor: 'rgba(210,153,34,0.12)', fill: true, tension: 0.35 }]
+  });
+
+  makeModuleChart('page-trafico', 'Distribución de ancho de banda', 'chartTraficoBandwidth', 'doughnut', {
+    labels: ['Productividad','Navegación','Streaming','Repositorios','Otros'],
+    datasets: [{ data: [34, 24, 18, 14, 10], backgroundColor: chartPalette, borderWidth: 0 }]
+  }, { cutout: '62%', scales: false });
+
+  makeModuleChart('page-logs', 'Acciones por tipo', 'chartLogsAcciones', 'bar', {
+    labels: ['Permitido','Bloqueado','Cuota','Advertencia'],
+    datasets: [{ label: 'Eventos', data: [3, 3, 1, 1], backgroundColor: ['#00ff84','#f85149','#d29922','#a371f7'] }]
+  });
+
+  makeModuleChart('page-avanzado', 'Estado de módulos UTM', 'chartAvanzadoUtm', 'radar', {
+    labels: ['Antivirus','IDS/IPS','DNS','SSL','Alertas'],
+    datasets: [{ label: 'Cobertura', data: [94, 88, 91, 86, 79], borderColor: '#00ff84', backgroundColor: 'rgba(0,255,132,0.12)', pointBackgroundColor: '#00ff84' }]
+  });
+  makeModuleChart('page-avanzado', 'Eventos por motor', 'chartAvanzadoEventos', 'bar', {
+    labels: ['AV','IPS','DNS','SSL','DoH'],
+    datasets: [{ label: 'Eventos', data: [18, 31, 24, 11, 7], backgroundColor: chartPalette }]
+  });
+
+  makeModuleChart('page-fortiguard', 'Sincronización FortiGuard', 'chartFortiguardSync', 'line', {
+    labels: ['00h','04h','08h','12h','16h','20h'],
+    datasets: [{ label: 'Latencia ms', data: [42, 38, 46, 41, 36, 39], borderColor: '#00ff84', backgroundColor: 'rgba(0,255,132,0.08)', fill: true, tension: 0.35 }]
+  });
+  makeModuleChart('page-fortiguard', 'Cobertura de base de datos', 'chartFortiguardCoverage', 'doughnut', {
+    labels: ['Categorías activas','Pendiente','Cache local'],
+    datasets: [{ data: [90, 0, 12], backgroundColor: ['#00ff84','#6e7681','#35ffa0'], borderWidth: 0 }]
+  }, { cutout: '68%', scales: false });
+
+  makeModuleChart('page-ajustes', 'Uso de recursos del dispositivo', 'chartAjustesRecursos', 'bar', {
+    labels: ['CPU','Memoria','Sesiones','Disco','Interfaces'],
+    datasets: [{ label: 'Uso %', data: [23, 26, 41, 18, 80], backgroundColor: ['#00ff84','#35ffa0','#d29922','#6e7681','#00ff84'] }]
+  });
+  makeModuleChart('page-ajustes', 'Histórico de uptime', 'chartAjustesUptime', 'line', {
+    labels: ['Sem 1','Sem 2','Sem 3','Sem 4'],
+    datasets: [{ label: 'Disponibilidad %', data: [99.5, 99.8, 99.7, 99.9], borderColor: '#00ff84', backgroundColor: 'rgba(0,255,132,0.08)', fill: true, tension: 0.35 }]
+  });
+
+  makeModuleChart('page-ayuda', 'Uso recomendado por módulo', 'chartAyudaModulos', 'bar', {
+    labels: ['Inicio','Filtrado','Usuarios','Políticas','Logs','Avanzado'],
+    datasets: [{ label: 'Frecuencia', data: [95, 72, 64, 58, 88, 41], backgroundColor: 'rgba(0,255,132,0.42)', borderColor: '#00ff84', borderWidth: 1 }]
+  });
+  makeModuleChart('page-ayuda', 'Madurez operativa', 'chartAyudaMadurez', 'radar', {
+    labels: ['Visibilidad','Control','Respuesta','Reportes','Gobierno'],
+    datasets: [{ label: 'Nivel', data: [86, 91, 74, 82, 69], borderColor: '#00ff84', backgroundColor: 'rgba(0,255,132,0.12)', pointBackgroundColor: '#00ff84' }]
+  });
+
+  // ─── PROFESSIONAL DASHBOARD TOOLS ───
+  function visibleRows(tbody) {
+    return Array.from(tbody?.querySelectorAll('tr') || []).filter(row => row.style.display !== 'none');
+  }
+
+  function filterUsers() {
+    const query = document.getElementById('user-search')?.value.trim().toLowerCase() || '';
+    const profile = document.getElementById('user-profile-filter')?.value || 'Todos los perfiles';
+    const tbody = document.getElementById('users-table-body');
+    Array.from(tbody?.querySelectorAll('tr') || []).forEach(row => {
+      const text = row.textContent.toLowerCase();
+      const rowProfile = row.children[2]?.textContent.trim() || '';
+      const matchesQuery = !query || text.includes(query);
+      const matchesProfile = profile === 'Todos los perfiles' || rowProfile.includes(profile);
+      row.style.display = matchesQuery && matchesProfile ? '' : 'none';
+    });
+  }
+
+  document.getElementById('user-search')?.addEventListener('input', filterUsers);
+  document.getElementById('user-profile-filter')?.addEventListener('change', filterUsers);
+
+  function filterLogs() {
+    const query = document.getElementById('log-search')?.value.trim().toLowerCase() || '';
+    const action = document.getElementById('log-action-filter')?.value || 'Todas las acciones';
+    const user = document.getElementById('log-user-filter')?.value || 'Todos los usuarios';
+    const tbody = document.getElementById('logs-table-body');
+    Array.from(tbody?.querySelectorAll('tr') || []).forEach(row => {
+      const text = row.textContent.toLowerCase();
+      const rowUser = row.children[1]?.textContent.toLowerCase() || '';
+      const rowAction = row.children[4]?.textContent.trim() || '';
+      const matchesQuery = !query || text.includes(query);
+      const matchesAction = action === 'Todas las acciones' || rowAction.includes(action);
+      const matchesUser = user === 'Todos los usuarios' || rowUser.includes(user.toLowerCase());
+      row.style.display = matchesQuery && matchesAction && matchesUser ? '' : 'none';
+    });
+    const count = visibleRows(tbody).length;
+    const label = document.getElementById('log-count');
+    if (label) label.textContent = count + (count === 1 ? ' evento visible' : ' eventos visibles');
+  }
+
+  document.getElementById('log-filter-btn')?.addEventListener('click', () => {
+    filterLogs();
+    showToast('Filtro aplicado', 'La tabla de logs se actualizó con los criterios seleccionados.');
+  });
+  ['log-search','log-action-filter','log-user-filter'].forEach(id => {
+    document.getElementById(id)?.addEventListener('input', filterLogs);
+    document.getElementById(id)?.addEventListener('change', filterLogs);
+  });
+  document.getElementById('log-reset-btn')?.addEventListener('click', () => {
+    document.getElementById('log-search').value = '';
+    document.getElementById('log-action-filter').value = 'Todas las acciones';
+    document.getElementById('log-user-filter').value = 'Todos los usuarios';
+    filterLogs();
+    showToast('Filtros limpiados', 'Se restauró la vista completa del historial.');
+  });
+
+  function exportVisibleLogsCsv() {
+    const tbody = document.getElementById('logs-table-body');
+    const rows = visibleRows(tbody);
+    const header = ['Hora','Usuario / IP','URL','Categoria','Accion','Tamano'];
+    const lines = rows.map(row => Array.from(row.children).map(cell => '"' + cell.textContent.trim().replaceAll('"', '""') + '"').join(','));
+    const csv = [header.join(','), ...lines].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'fortigate-logs-filtrados.csv';
+    link.click();
+    URL.revokeObjectURL(url);
+    showToast('CSV generado', rows.length + ' eventos exportados desde la vista actual.');
+  }
+
+  document.getElementById('export-csv-btn')?.addEventListener('click', exportVisibleLogsCsv);
+  document.getElementById('export-pdf-btn')?.addEventListener('click', () => {
+    showToast('Reporte preparado', 'Usa la vista de impresion del navegador para guardar el reporte en PDF.');
+    window.print();
+  });
+
+  document.querySelectorAll('#page-alertas .btn, #page-avanzado .btn, #page-fortiguard .btn, #page-ajustes .btn').forEach(btn => {
+    btn.addEventListener('click', () => showToast('Acción registrada', btn.textContent.trim() + ' quedó registrado en auditoría.'));
+  });
+
+  // ─── BACKGROUND MUSIC ───
+  const bgMusic = document.getElementById('bg-music');
+  const musicState = document.getElementById('music-state');
+  const musicVolume = document.getElementById('music-volume');
+  const musicPlayer = document.querySelector('.music-player');
+  let musicStarted = false;
+  let musicDrag = null;
+
+  function setMusicState(text) {
+    if (musicState) musicState.textContent = text;
+  }
+
+  function playMusic() {
+    if (!bgMusic) return;
+    bgMusic.volume = Number(musicVolume?.value || 0.16);
+    bgMusic.play()
+      .then(() => {
+        musicStarted = true;
+        setMusicState('Reproduciendo · volumen bajo');
+      })
+      .catch(() => {
+        setMusicState('Pulsa reproducir para iniciar');
+      });
+  }
+
+  function pauseMusic() {
+    if (!bgMusic) return;
+    bgMusic.pause();
+    setMusicState('Pausado');
+  }
+
+  function stopMusic() {
+    if (!bgMusic) return;
+    bgMusic.pause();
+    bgMusic.currentTime = 0;
+    musicStarted = false;
+    setMusicState('Detenido');
+  }
+
+  document.getElementById('music-play')?.addEventListener('click', playMusic);
+  document.getElementById('music-pause')?.addEventListener('click', pauseMusic);
+  document.getElementById('music-stop')?.addEventListener('click', stopMusic);
+  musicVolume?.addEventListener('input', () => {
+    if (bgMusic) bgMusic.volume = Number(musicVolume.value);
+    setMusicState((bgMusic && !bgMusic.paused ? 'Reproduciendo' : 'Listo') + ' · volumen ' + Math.round(Number(musicVolume.value) * 200) + '%');
+  });
+  bgMusic?.addEventListener('ended', () => {
+    musicStarted = false;
+    setMusicState('Canción terminada');
+  });
+
+  function clampMusicPlayerPosition(x, y) {
+    if (!musicPlayer) return { x, y };
+    const rect = musicPlayer.getBoundingClientRect();
+    const margin = 8;
+    const maxX = Math.max(margin, window.innerWidth - rect.width - margin);
+    const maxY = Math.max(margin, window.innerHeight - rect.height - margin);
+    return {
+      x: Math.min(Math.max(margin, x), maxX),
+      y: Math.min(Math.max(margin, y), maxY)
+    };
+  }
+
+  function setMusicPlayerPosition(x, y, save = false) {
+    if (!musicPlayer) return;
+    const pos = clampMusicPlayerPosition(x, y);
+    musicPlayer.style.left = pos.x + 'px';
+    musicPlayer.style.top = pos.y + 'px';
+    musicPlayer.style.right = 'auto';
+    if (save) localStorage.setItem('musicPlayerPosition', JSON.stringify(pos));
+  }
+
+  function restoreMusicPlayerPosition() {
+    if (!musicPlayer) return;
+    try {
+      const saved = JSON.parse(localStorage.getItem('musicPlayerPosition') || 'null');
+      if (saved && Number.isFinite(saved.x) && Number.isFinite(saved.y)) {
+        setMusicPlayerPosition(saved.x, saved.y);
+      }
+    } catch (_) {}
+  }
+
+  restoreMusicPlayerPosition();
+  window.addEventListener('resize', () => {
+    if (!musicPlayer || !musicPlayer.style.left) return;
+    setMusicPlayerPosition(parseFloat(musicPlayer.style.left), parseFloat(musicPlayer.style.top), true);
+  });
+  musicPlayer?.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('button, input')) return;
+    const rect = musicPlayer.getBoundingClientRect();
+    musicDrag = {
+      pointerId: e.pointerId,
+      offsetX: e.clientX - rect.left,
+      offsetY: e.clientY - rect.top
+    };
+    musicPlayer.classList.add('dragging');
+    musicPlayer.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+  musicPlayer?.addEventListener('pointermove', (e) => {
+    if (!musicDrag || musicDrag.pointerId !== e.pointerId) return;
+    setMusicPlayerPosition(e.clientX - musicDrag.offsetX, e.clientY - musicDrag.offsetY);
+  });
+  musicPlayer?.addEventListener('pointerup', (e) => {
+    if (!musicDrag || musicDrag.pointerId !== e.pointerId) return;
+    musicDrag = null;
+    musicPlayer.classList.remove('dragging');
+    musicPlayer.releasePointerCapture(e.pointerId);
+    setMusicPlayerPosition(parseFloat(musicPlayer.style.left), parseFloat(musicPlayer.style.top), true);
+  });
+  musicPlayer?.addEventListener('pointercancel', () => {
+    musicDrag = null;
+    musicPlayer.classList.remove('dragging');
+  });
+
+  document.addEventListener('pointerdown', () => {
+    if (!musicStarted && bgMusic?.paused) playMusic();
+  }, { once: true });
+</script>
+
+<script>
+  // ─── LOGIN LOGIC ───
+  const VALID_ID   = 'elias';
+  const VALID_PASS = 'gonzales123';
+  const LOADING_DURATION_MS = 60000;
+  let loadingTimer = null;
+
+  function showDashboardAfterLoading(id) {
+    const loadingScreen = document.getElementById('loading-screen');
+    if (bgMusic?.paused && musicStarted) playMusic();
+    loadingScreen.classList.add('visible');
+    loadingScreen.classList.remove('exit');
+
+    loadingTimer = setTimeout(() => {
+      loadingScreen.classList.add('exit');
+      setTimeout(() => {
+        loadingScreen.classList.remove('visible', 'exit');
+        const dash = document.getElementById('dashboard-wrap');
+        dash.classList.add('visible');
+        document.querySelectorAll('.avatar').forEach(a => {
+          a.textContent = 'EL';
+          a.setAttribute('data-tip', id + '@empresa.com');
+        });
+      }, 500);
+    }, LOADING_DURATION_MS);
+  }
+
+  function handleLogin() {
+    if (bgMusic?.paused) playMusic();
+    const id   = document.getElementById('login-id').value.trim();
+    const pass = document.getElementById('login-pass').value;
+    const btn  = document.getElementById('login-btn');
+    const err  = document.getElementById('login-error');
+    const msg  = document.getElementById('login-error-msg');
+
+    // Clear previous error
+    err.classList.remove('show');
+
+    if (!id || !pass) {
+      msg.textContent = 'Por favor completa todos los campos.';
+      err.classList.add('show');
+      return;
+    }
+
+    // Loading state
+    btn.classList.add('loading');
+    btn.innerHTML = '<svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="animation:spin 0.8s linear infinite"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Verificando';
+
+    setTimeout(() => {
+      if (id === VALID_ID && pass === VALID_PASS) {
+        // SUCCESS — animate out login, show loading screen, then open dashboard.
+        document.getElementById('login-screen').classList.add('exit');
+        setTimeout(() => {
+          document.getElementById('login-screen').style.display = 'none';
+          showDashboardAfterLoading(id);
+        }, 400);
+      } else {
+        // FAIL
+        btn.classList.remove('loading');
+        btn.textContent = 'Login';
+        msg.textContent = 'ID o contraseña incorrectos. Inténtalo de nuevo.';
+        err.classList.add('show');
+        // Shake fields
+        ['login-id','login-pass'].forEach(id => {
+          const el = document.getElementById(id);
+          el.style.borderColor = '#f85149';
+          setTimeout(() => { el.style.borderColor = ''; }, 1200);
+        });
+      }
+    }, 900);
+  }
+
+  // Enter key support
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && document.getElementById('login-screen').style.display !== 'none') {
+      handleLogin();
+    }
+  });
+
+  // Spin animation for loading icon
+  const style = document.createElement('style');
+  style.textContent = '@keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }';
+  document.head.appendChild(style);
+
+  // Logout button wires back to login
+  document.querySelectorAll('.sidebar-footer .nav-item').forEach(item => {
+    item.addEventListener('click', () => {
+      if (loadingTimer) {
+        clearTimeout(loadingTimer);
+        loadingTimer = null;
+      }
+      document.getElementById('dashboard-wrap').classList.remove('visible');
+      document.getElementById('loading-screen').classList.remove('visible', 'exit');
+      const loginScreen = document.getElementById('login-screen');
+      loginScreen.style.display = 'flex';
+      loginScreen.classList.remove('exit');
+      document.getElementById('login-id').value = '';
+      document.getElementById('login-pass').value = '';
+      document.getElementById('login-error').classList.remove('show');
+      const btn = document.getElementById('login-btn');
+      btn.classList.remove('loading');
+      btn.textContent = 'Login';
+    });
+  });
+</script>
+</body>
+</html>

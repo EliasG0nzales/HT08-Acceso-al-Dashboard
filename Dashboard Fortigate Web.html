@@ -1,0 +1,1168 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FortiGate — Filtrado Web</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d1117;
+    --bg2: #161b22;
+    --bg3: #1c2331;
+    --bg4: #21262d;
+    --border: rgba(48,54,61,0.9);
+    --border2: rgba(99,110,123,0.4);
+    --text: #e6edf3;
+    --text2: #8b949e;
+    --text3: #6e7681;
+    --accent: #1f6feb;
+    --accent2: #388bfd;
+    --green: #3fb950;
+    --green2: #0d4429;
+    --red: #f85149;
+    --red2: #490202;
+    --amber: #d29922;
+    --amber2: #341a00;
+    --blue-glow: rgba(31,111,235,0.15);
+    --font: 'IBM Plex Sans', sans-serif;
+    --mono: 'IBM Plex Mono', monospace;
+    --sidebar-w: 220px;
+    --header-h: 56px;
+    --radius: 8px;
+    --radius-lg: 12px;
+    --trans: 0.18s ease;
+  }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    overflow: hidden;
+  }
+
+  /* ── SIDEBAR ── */
+  #sidebar {
+    width: var(--sidebar-w);
+    min-width: var(--sidebar-w);
+    height: 100vh;
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    left: 0; top: 0;
+    z-index: 100;
+    transition: width var(--trans);
+    overflow: hidden;
+  }
+  #sidebar.collapsed { width: 56px; min-width: 56px; }
+
+  .sidebar-logo {
+    height: var(--header-h);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    border-bottom: 1px solid var(--border);
+    gap: 10px;
+    white-space: nowrap;
+  }
+  .logo-icon {
+    width: 28px; height: 28px; flex-shrink: 0;
+    background: var(--accent);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .logo-icon svg { width: 16px; height: 16px; fill: #fff; }
+  .logo-text { font-size: 14px; font-weight: 600; letter-spacing: -0.01em; opacity: 1; transition: opacity var(--trans); }
+  .logo-sub { font-size: 10px; color: var(--text3); letter-spacing: 0.04em; }
+  #sidebar.collapsed .logo-text,
+  #sidebar.collapsed .logo-sub,
+  #sidebar.collapsed .nav-label,
+  #sidebar.collapsed .nav-section-label { opacity: 0; pointer-events: none; }
+
+  .sidebar-body { flex: 1; overflow-y: auto; padding: 12px 8px; }
+  .sidebar-body::-webkit-scrollbar { width: 4px; }
+  .sidebar-body::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+  .nav-section-label {
+    font-size: 10px; color: var(--text3); text-transform: uppercase;
+    letter-spacing: 0.08em; padding: 10px 8px 4px;
+    white-space: nowrap; transition: opacity var(--trans);
+  }
+
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 10px; border-radius: var(--radius);
+    cursor: pointer; white-space: nowrap;
+    transition: background var(--trans), color var(--trans);
+    color: var(--text2); font-size: 13px;
+    position: relative;
+    margin-bottom: 2px;
+  }
+  .nav-item:hover { background: var(--bg3); color: var(--text); }
+  .nav-item.active { background: rgba(31,111,235,0.15); color: var(--accent2); }
+  .nav-item.active::before {
+    content: ''; position: absolute; left: 0; top: 20%; bottom: 20%;
+    width: 3px; background: var(--accent2); border-radius: 0 2px 2px 0;
+  }
+  .nav-icon { width: 18px; height: 18px; flex-shrink: 0; }
+  .nav-label { transition: opacity var(--trans); }
+  .nav-badge {
+    margin-left: auto; font-size: 10px; font-family: var(--mono);
+    background: var(--red); color: #fff;
+    padding: 1px 6px; border-radius: 20px; flex-shrink: 0;
+  }
+  .nav-badge.amber { background: var(--amber); }
+  .nav-badge.green { background: var(--green); color: #0d1117; }
+  #sidebar.collapsed .nav-badge { display: none; }
+
+  .sidebar-footer {
+    padding: 12px 8px;
+    border-top: 1px solid var(--border);
+  }
+
+  /* ── MAIN LAYOUT ── */
+  #main {
+    margin-left: var(--sidebar-w);
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    transition: margin-left var(--trans);
+    overflow: hidden;
+  }
+  #sidebar.collapsed ~ #main { margin-left: 56px; }
+
+  /* ── TOPBAR ── */
+  #topbar {
+    height: var(--header-h);
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center;
+    padding: 0 24px; gap: 16px;
+    position: sticky; top: 0; z-index: 50;
+  }
+  #toggle-btn {
+    background: none; border: none; cursor: pointer;
+    color: var(--text2); padding: 6px; border-radius: var(--radius);
+    transition: background var(--trans);
+  }
+  #toggle-btn:hover { background: var(--bg3); color: var(--text); }
+  #toggle-btn svg { width: 18px; height: 18px; display: block; }
+
+  .topbar-title { font-size: 14px; font-weight: 500; flex: 1; }
+  .topbar-status {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12px; color: var(--text2);
+  }
+  .status-dot {
+    width: 7px; height: 7px; border-radius: 50%; background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+  .topbar-btn {
+    background: none; border: 1px solid var(--border);
+    color: var(--text2); padding: 6px 12px; border-radius: var(--radius);
+    font-size: 12px; font-family: var(--font); cursor: pointer;
+    transition: background var(--trans), color var(--trans);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .topbar-btn:hover { background: var(--bg3); color: var(--text); }
+  .topbar-btn svg { width: 14px; height: 14px; }
+
+  .avatar {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: var(--accent); display: flex; align-items: center;
+    justify-content: center; font-size: 12px; font-weight: 600; cursor: pointer;
+  }
+
+  /* ── CONTENT ── */
+  #content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+  }
+  #content::-webkit-scrollbar { width: 6px; }
+  #content::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+  .page { display: none; animation: fadeIn 0.2s ease; }
+  .page.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+  .page-header {
+    display: flex; align-items: flex-start;
+    justify-content: space-between; margin-bottom: 24px;
+    flex-wrap: wrap; gap: 12px;
+  }
+  .page-header h1 { font-size: 20px; font-weight: 600; letter-spacing: -0.02em; }
+  .page-header p { font-size: 12px; color: var(--text2); margin-top: 3px; }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 18px 20px;
+    position: relative;
+    overflow: hidden;
+    z-index: 0;
+  }
+
+  /* Glow border on hover — conic gradient rotating */
+  .card::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: calc(var(--radius-lg) + 2px);
+    background: conic-gradient(
+      from var(--angle, 0deg),
+      transparent 0deg,
+      transparent 260deg,
+      #f85149 280deg,
+      #ff8c42 300deg,
+      #388bfd 320deg,
+      #3fb950 340deg,
+      transparent 360deg
+    );
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.35s ease;
+  }
+
+  /* Inner fill to keep bg clean */
+  .card::after {
+    content: '';
+    position: absolute;
+    inset: 1px;
+    background: var(--bg2);
+    border-radius: calc(var(--radius-lg) - 1px);
+    z-index: -1;
+  }
+
+  .card:hover::before {
+    opacity: 1;
+    animation: spin-border 2.4s linear infinite;
+  }
+
+  @property --angle {
+    syntax: '<angle>';
+    initial-value: 0deg;
+    inherits: false;
+  }
+
+  @keyframes spin-border {
+    0%   { --angle: 0deg; }
+    100% { --angle: 360deg; }
+  }
+  .card-title {
+    font-size: 12px; font-weight: 500; color: var(--text2);
+    text-transform: uppercase; letter-spacing: 0.06em;
+    margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
+  }
+  .card-title svg { width: 14px; height: 14px; }
+
+  /* ── METRICS ── */
+  .metrics-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 20px; }
+  .metric {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 16px 18px;
+    position: relative; overflow: hidden; z-index: 0;
+  }
+  .metric-bar { position:absolute; top:0; left:0; right:0; height:2px; z-index:2; border-radius:var(--radius-lg) var(--radius-lg) 0 0; }
+  .metric.m-blue  .metric-bar { background:var(--accent2); }
+  .metric.m-red   .metric-bar { background:var(--red); }
+  .metric.m-amber .metric-bar { background:var(--amber); }
+  .metric.m-green .metric-bar { background:var(--green); }
+  .metric::before {
+    content:''; position:absolute; inset:-2px;
+    border-radius:calc(var(--radius-lg) + 2px);
+    background:conic-gradient(from var(--angle,0deg),transparent 0deg,transparent 260deg,#f85149 280deg,#ff8c42 300deg,#388bfd 320deg,#3fb950 340deg,transparent 360deg);
+    z-index:-1; opacity:0; transition:opacity 0.35s ease;
+  }
+  .metric::after { content:''; position:absolute; inset:1px; background:var(--bg2); border-radius:calc(var(--radius-lg) - 1px); z-index:-1; }
+  .metric:hover::before { opacity:1; animation:spin-border 2.4s linear infinite; }
+  .metric-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+  .metric-val { font-size: 26px; font-weight: 600; font-family: var(--mono); line-height: 1; }
+  .metric-delta { font-size: 11px; color: var(--text3); margin-top: 6px; display: flex; align-items: center; gap: 4px; }
+  .delta-up { color: var(--green); }
+  .delta-dn { color: var(--red); }
+
+  /* ── GRID LAYOUTS ── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .grid-2-1 { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .span2 { grid-column: span 2; }
+
+  /* ── TABLE ── */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  thead th {
+    text-align: left; padding: 8px 12px;
+    font-size: 11px; color: var(--text3);
+    text-transform: uppercase; letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--border);
+    font-weight: 500;
+  }
+  tbody tr { border-bottom: 1px solid rgba(48,54,61,0.5); transition: background var(--trans); }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--bg3); }
+  td { padding: 10px 12px; color: var(--text2); vertical-align: middle; }
+  td:first-child { color: var(--text); font-weight: 500; }
+
+  /* ── BADGES ── */
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 10px; font-weight: 500; padding: 2px 8px;
+    border-radius: 20px; font-family: var(--mono);
+  }
+  .badge-block { background: var(--red2); color: var(--red); border: 1px solid rgba(248,81,73,0.3); }
+  .badge-allow { background: var(--green2); color: var(--green); border: 1px solid rgba(63,185,80,0.3); }
+  .badge-monitor { background: rgba(31,111,235,0.12); color: var(--accent2); border: 1px solid rgba(56,139,253,0.3); }
+  .badge-warn { background: var(--amber2); color: var(--amber); border: 1px solid rgba(210,153,34,0.3); }
+
+  /* ── BAR ROWS ── */
+  .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .bar-row:last-child { margin-bottom: 0; }
+  .bar-name { font-size: 12px; color: var(--text2); width: 130px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bar-track { flex: 1; height: 5px; background: var(--bg3); border-radius: 3px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 3px; transition: width 0.6s ease; }
+  .bar-pct { font-size: 11px; color: var(--text3); font-family: var(--mono); width: 36px; text-align: right; }
+
+  /* ── EVENTS ── */
+  .event { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid rgba(48,54,61,0.5); }
+  .event:last-child { border-bottom: none; }
+  .ev-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+  .ev-red { background: var(--red); box-shadow: 0 0 5px rgba(248,81,73,0.5); }
+  .ev-amber { background: var(--amber); box-shadow: 0 0 5px rgba(210,153,34,0.5); }
+  .ev-blue { background: var(--accent2); }
+  .ev-green { background: var(--green); }
+  .ev-main { font-size: 12px; color: var(--text); }
+  .ev-meta { font-size: 11px; color: var(--text3); margin-top: 2px; font-family: var(--mono); }
+  .ev-time { font-size: 10px; color: var(--text3); margin-left: auto; flex-shrink: 0; font-family: var(--mono); }
+
+  /* ── QUOTA BARS ── */
+  .quota-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .quota-label { font-size: 11px; color: var(--text2); width: 90px; flex-shrink: 0; }
+  .quota-track { flex: 1; height: 6px; background: var(--bg3); border-radius: 3px; overflow: hidden; }
+  .quota-fill { height: 100%; border-radius: 3px; }
+  .quota-val { font-size: 10px; color: var(--text3); font-family: var(--mono); width: 50px; text-align: right; }
+
+  /* ── STATUS ROW ── */
+  .stat-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid rgba(48,54,61,0.4); font-size: 12px; }
+  .stat-row:last-child { border-bottom: none; }
+  .stat-k { color: var(--text2); }
+  .stat-v { color: var(--text); font-family: var(--mono); font-size: 11px; }
+
+  /* ── TOGGLE SWITCH ── */
+  .toggle-wrap { display: flex; align-items: center; gap: 10px; }
+  .switch { position: relative; width: 34px; height: 18px; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider {
+    position: absolute; inset: 0; background: var(--bg3);
+    border-radius: 20px; cursor: pointer; border: 1px solid var(--border2);
+    transition: background var(--trans);
+  }
+  .slider::before {
+    content: ''; position: absolute; width: 12px; height: 12px;
+    left: 2px; bottom: 2px; background: var(--text3); border-radius: 50%;
+    transition: transform var(--trans), background var(--trans);
+  }
+  input:checked + .slider { background: rgba(31,111,235,0.3); border-color: var(--accent); }
+  input:checked + .slider::before { transform: translateX(16px); background: var(--accent2); }
+  .toggle-label { font-size: 12px; color: var(--text2); }
+
+  /* ── FORM ELEMENTS ── */
+  .form-group { margin-bottom: 16px; }
+  .form-label { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; display: block; }
+  .form-input, .form-select {
+    width: 100%; padding: 8px 12px;
+    background: var(--bg3); border: 1px solid var(--border);
+    border-radius: var(--radius); color: var(--text);
+    font-size: 12px; font-family: var(--font);
+    transition: border-color var(--trans);
+    outline: none;
+  }
+  .form-input:focus, .form-select:focus { border-color: var(--accent); }
+  .form-select option { background: var(--bg3); }
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 16px; border-radius: var(--radius);
+    font-size: 12px; font-family: var(--font);
+    cursor: pointer; transition: background var(--trans), opacity var(--trans);
+    border: none; font-weight: 500;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent2); }
+  .btn-ghost { background: transparent; color: var(--text2); border: 1px solid var(--border); }
+  .btn-ghost:hover { background: var(--bg3); color: var(--text); }
+  .btn-danger { background: rgba(248,81,73,0.12); color: var(--red); border: 1px solid rgba(248,81,73,0.3); }
+  .btn-danger:hover { background: rgba(248,81,73,0.2); }
+  .btn svg { width: 13px; height: 13px; }
+
+  /* ── SCROLLBAR GLOBAL ── */
+  html { scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
+
+  /* ── TOOLTIP ── */
+  [data-tip] { position: relative; }
+  [data-tip]::after {
+    content: attr(data-tip);
+    position: absolute; left: 50%; bottom: 120%;
+    transform: translateX(-50%); white-space: nowrap;
+    background: var(--bg4); color: var(--text); font-size: 11px;
+    padding: 4px 8px; border-radius: 4px; pointer-events: none;
+    opacity: 0; transition: opacity 0.15s; border: 1px solid var(--border);
+    z-index: 200;
+  }
+  [data-tip]:hover::after { opacity: 1; }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 900px) {
+    .metrics-row { grid-template-columns: repeat(2,1fr); }
+    .grid-2, .grid-2-1 { grid-template-columns: 1fr; }
+    .grid-3 { grid-template-columns: 1fr 1fr; }
+    .span2 { grid-column: span 1; }
+  }
+  @media (max-width: 600px) {
+    #sidebar { width: 56px; }
+    #main { margin-left: 56px; }
+    .metrics-row { grid-template-columns: 1fr 1fr; }
+    .grid-3 { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ════════════════ SIDEBAR ════════════════ -->
+<nav id="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5L12 1zm0 4l6 2.69V11c0 3.72-2.56 7.2-6 8.31-3.44-1.11-6-4.59-6-8.31V7.69L12 5z"/></svg>
+    </div>
+    <div>
+      <div class="logo-text">FortiGate</div>
+      <div class="logo-sub">WEB FILTER</div>
+    </div>
+  </div>
+
+  <div class="sidebar-body">
+    <div class="nav-section-label">Principal</div>
+    <div class="nav-item active" data-page="dashboard">
+      <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      <span class="nav-label">Dashboard</span>
+    </div>
+    <div class="nav-item" data-page="trafico">
+      <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      <span class="nav-label">Tráfico Web</span>
+    </div>
+    <div class="nav-item" data-page="alertas">
+      <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      <span class="nav-label">Alertas</span>
+      <span class="nav-badge">3</span>
+    </div>
+
+    <div class="nav-section-label" style="margin-top:8px;">Configuración</div>
+    <div class="nav-item" data-page="politicas">
+      <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      <span class="nav-label">Políticas</span>
+    </div>
+    <div class="nav-item" data-page="categorias">
+      <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+      <span class="nav-label">Categorías</span>
+    </div>
+    <div class="nav-item" data-page="listas">
+      <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      <span class="nav-label">Listas URL</span>
+      <span class="nav-badge green">47</span>
+    </div>
+    <div class="nav-item" data-page="cuotas">
+      <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <span class="nav-label">Cuotas</span>
+    </div>
+
+    <div class="nav-section-label" style="margin-top:8px;">Sistema</div>
+    <div class="nav-item" data-page="fortiguard">
+      <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+      <span class="nav-label">FortiGuard DB</span>
+    </div>
+    <div class="nav-item" data-page="ajustes">
+      <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      <span class="nav-label">Ajustes</span>
+    </div>
+  </div>
+
+  <div class="sidebar-footer">
+    <div class="nav-item">
+      <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      <span class="nav-label">Cerrar sesión</span>
+    </div>
+  </div>
+</nav>
+
+<!-- ════════════════ MAIN ════════════════ -->
+<div id="main">
+  <header id="topbar">
+    <button id="toggle-btn" title="Colapsar menú">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <span class="topbar-title" id="topbar-title">Dashboard</span>
+    <div class="topbar-status">
+      <div class="status-dot"></div>
+      <span>Servicio activo</span>
+    </div>
+    <button class="topbar-btn">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="14" y2="12"/><line x1="4" y1="18" x2="18" y2="18"/></svg>
+      Logs
+    </button>
+    <button class="topbar-btn" id="refresh-btn">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+      Actualizar
+    </button>
+    <div class="avatar" data-tip="admin@empresa.com">AD</div>
+  </header>
+
+  <div id="content">
+
+    <!-- ════ PAGE: DASHBOARD ════ -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-header">
+        <div>
+          <h1>Panel de control</h1>
+          <p>Resumen de filtrado web · FortiOS 7.4.3 · FG-200F</p>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <span class="badge badge-allow" style="font-size:11px;padding:4px 12px;">● Sistema operativo</span>
+          <span class="badge badge-warn" style="font-size:11px;padding:4px 12px;">▲ 3 alertas activas</span>
+        </div>
+      </div>
+
+      <div class="metrics-row">
+        <div class="metric m-blue">
+          <div class="metric-bar"></div>
+          <div class="metric-label">Solicitudes totales</div>
+          <div class="metric-val">1.24M</div>
+          <div class="metric-delta"><span class="delta-up">↑ 8%</span> vs ayer</div>
+        </div>
+        <div class="metric m-red">
+          <div class="metric-bar"></div>
+          <div class="metric-label">Bloqueadas</div>
+          <div class="metric-val">87,402</div>
+          <div class="metric-delta"><span class="delta-dn">↑ 12%</span> amenazas</div>
+        </div>
+        <div class="metric m-amber">
+          <div class="metric-bar"></div>
+          <div class="metric-label">Advertencias</div>
+          <div class="metric-val">14,190</div>
+          <div class="metric-delta"><span class="delta-up">↓ 3%</span> vs ayer</div>
+        </div>
+        <div class="metric m-green">
+          <div class="metric-bar"></div>
+          <div class="metric-label">Usuarios activos</div>
+          <div class="metric-val">342</div>
+          <div class="metric-delta"><span class="delta-up">+5</span> nuevos hoy</div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            Tráfico por hora
+          </div>
+          <div style="position:relative;height:180px;">
+            <canvas id="chartTrafico" role="img" aria-label="Tráfico web por hora del día"></canvas>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+            Categorías más bloqueadas
+          </div>
+          <div class="bar-row"><span class="bar-name">Malware / C&C</span><div class="bar-track"><div class="bar-fill" style="width:88%;background:#f85149;"></div></div><span class="bar-pct">88%</span></div>
+          <div class="bar-row"><span class="bar-name">Phishing</span><div class="bar-track"><div class="bar-fill" style="width:72%;background:#d29922;"></div></div><span class="bar-pct">72%</span></div>
+          <div class="bar-row"><span class="bar-name">Redes sociales</span><div class="bar-track"><div class="bar-fill" style="width:54%;background:#388bfd;"></div></div><span class="bar-pct">54%</span></div>
+          <div class="bar-row"><span class="bar-name">Streaming</span><div class="bar-track"><div class="bar-fill" style="width:41%;background:#3fb950;"></div></div><span class="bar-pct">41%</span></div>
+          <div class="bar-row"><span class="bar-name">Juegos en línea</span><div class="bar-track"><div class="bar-fill" style="width:28%;background:#a371f7;"></div></div><span class="bar-pct">28%</span></div>
+          <div class="bar-row"><span class="bar-name">Torrents / P2P</span><div class="bar-track"><div class="bar-fill" style="width:19%;background:#6e7681;"></div></div><span class="bar-pct">19%</span></div>
+        </div>
+      </div>
+
+      <div class="grid-2-1">
+        <div class="card">
+          <div class="card-title">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            Eventos recientes
+          </div>
+          <div class="event">
+            <div class="ev-dot ev-red"></div>
+            <div style="flex:1">
+              <div class="ev-main">Bloqueo: sitio de phishing detectado</div>
+              <div class="ev-meta">192.168.10.45 → phish-login.ru · Política corporativa</div>
+            </div>
+            <div class="ev-time">4 min</div>
+          </div>
+          <div class="event">
+            <div class="ev-dot ev-amber"></div>
+            <div style="flex:1">
+              <div class="ev-main">Cuota próxima a agotarse — Juegos</div>
+              <div class="ev-meta">47 usuarios · 19/20 min consumidos</div>
+            </div>
+            <div class="ev-time">11 min</div>
+          </div>
+          <div class="event">
+            <div class="ev-dot ev-red"></div>
+            <div style="flex:1">
+              <div class="ev-main">Bloqueo: descarga de malware bloqueada</div>
+              <div class="ev-meta">192.168.22.18 → cdn-dl.xyz/payload.exe</div>
+            </div>
+            <div class="ev-time">18 min</div>
+          </div>
+          <div class="event">
+            <div class="ev-dot ev-blue"></div>
+            <div style="flex:1">
+              <div class="ev-main">Excepción aprobada por administrador</div>
+              <div class="ev-meta">teams.microsoft.com añadido a lista blanca</div>
+            </div>
+            <div class="ev-time">34 min</div>
+          </div>
+          <div class="event">
+            <div class="ev-dot ev-amber"></div>
+            <div style="flex:1">
+              <div class="ev-main">Advertencia: contenido adulto detectado</div>
+              <div class="ev-meta">192.168.30.7 · usuario notificado</div>
+            </div>
+            <div class="ev-time">1 h</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Distribución de acciones</div>
+          <div style="position:relative;height:140px;margin-bottom:12px;">
+            <canvas id="chartDonut" role="img" aria-label="92% permitido, 7% bloqueado, 1% advertencia"></canvas>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;font-size:11px;">
+              <span style="display:flex;align-items:center;gap:6px;color:var(--text2);"><span style="width:8px;height:8px;border-radius:2px;background:#3fb950;display:inline-block;"></span>Permitidas</span>
+              <span style="font-family:var(--mono);color:var(--green);">92%</span>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;font-size:11px;">
+              <span style="display:flex;align-items:center;gap:6px;color:var(--text2);"><span style="width:8px;height:8px;border-radius:2px;background:#f85149;display:inline-block;"></span>Bloqueadas</span>
+              <span style="font-family:var(--mono);color:var(--red);">7%</span>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;font-size:11px;">
+              <span style="display:flex;align-items:center;gap:6px;color:var(--text2);"><span style="width:8px;height:8px;border-radius:2px;background:#d29922;display:inline-block;"></span>Advertencias</span>
+              <span style="font-family:var(--mono);color:var(--amber);">1%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ PAGE: TRÁFICO ════ -->
+    <div class="page" id="page-trafico">
+      <div class="page-header">
+        <div><h1>Tráfico Web</h1><p>Análisis de solicitudes HTTP/HTTPS en tiempo real</p></div>
+      </div>
+      <div class="metrics-row">
+        <div class="metric m-blue">
+          <div class="metric-bar"></div><div class="metric-label">Solicitudes / seg</div><div class="metric-val">143</div><div class="metric-delta">promedio actual</div></div>
+        <div class="metric m-green">
+          <div class="metric-bar"></div><div class="metric-label">Ancho de banda</div><div class="metric-val">842 MB</div><div class="metric-delta">consumido hoy</div></div>
+        <div class="metric m-red">
+          <div class="metric-bar"></div><div class="metric-label">URLs únicas bloq.</div><div class="metric-val">2,841</div><div class="metric-delta"><span class="delta-dn">↑ 5%</span> vs ayer</div></div>
+        <div class="metric m-amber">
+          <div class="metric-bar"></div><div class="metric-label">Tasa de bloqueo</div><div class="metric-val">7.06%</div><div class="metric-delta">del tráfico total</div></div>
+      </div>
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-title">Solicitudes — últimas 24 h (por hora)</div>
+        <div style="position:relative;height:220px;">
+          <canvas id="chartTrafico24" role="img" aria-label="Tráfico de 24 horas"></canvas>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">Top dominios bloqueados hoy</div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>#</th><th>Dominio</th><th>Categoría</th><th>Bloqueos</th></tr></thead>
+              <tbody>
+                <tr><td>1</td><td>phish-login.ru</td><td><span class="badge badge-block">Phishing</span></td><td style="font-family:var(--mono);">4,201</td></tr>
+                <tr><td>2</td><td>torrent-hd.net</td><td><span class="badge badge-block">P2P</span></td><td style="font-family:var(--mono);">3,890</td></tr>
+                <tr><td>3</td><td>cdn-dl.xyz</td><td><span class="badge badge-block">Malware</span></td><td style="font-family:var(--mono);">2,714</td></tr>
+                <tr><td>4</td><td>casino-online.io</td><td><span class="badge badge-block">Juegos</span></td><td style="font-family:var(--mono);">1,988</td></tr>
+                <tr><td>5</td><td>vpn-bypass.co</td><td><span class="badge badge-block">Proxy</span></td><td style="font-family:var(--mono);">1,402</td></tr>
+                <tr><td>6</td><td>freemovies.to</td><td><span class="badge badge-block">Streaming</span></td><td style="font-family:var(--mono);">987</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Top usuarios por volumen</div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>IP</th><th>Usuario</th><th>Solicitudes</th><th>Estado</th></tr></thead>
+              <tbody>
+                <tr><td>192.168.10.45</td><td>jlopez</td><td style="font-family:var(--mono);">8,201</td><td><span class="badge badge-warn">Alerta</span></td></tr>
+                <tr><td>192.168.22.18</td><td>mgarcia</td><td style="font-family:var(--mono);">6,714</td><td><span class="badge badge-allow">Normal</span></td></tr>
+                <tr><td>192.168.30.7</td><td>aperez</td><td style="font-family:var(--mono);">5,988</td><td><span class="badge badge-warn">Cuota</span></td></tr>
+                <tr><td>192.168.14.2</td><td>rrodriguez</td><td style="font-family:var(--mono);">4,402</td><td><span class="badge badge-allow">Normal</span></td></tr>
+                <tr><td>192.168.9.88</td><td>cmartinez</td><td style="font-family:var(--mono);">3,987</td><td><span class="badge badge-allow">Normal</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ PAGE: ALERTAS ════ -->
+    <div class="page" id="page-alertas">
+      <div class="page-header">
+        <div><h1>Alertas</h1><p>3 alertas activas requieren atención</p></div>
+        <button class="btn btn-ghost">Marcar todas como leídas</button>
+      </div>
+      <div class="card" style="margin-bottom:16px;border-left:3px solid var(--red);">
+        <div style="display:flex;align-items:flex-start;gap:14px;">
+          <div style="width:36px;height:36px;background:var(--red2);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <svg width="18" height="18" fill="none" stroke="#f85149" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          </div>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:500;margin-bottom:4px;">Intento de descarga de malware detectado</div>
+            <div style="font-size:12px;color:var(--text2);margin-bottom:8px;">El host 192.168.22.18 intentó descargar <code style="background:var(--bg3);padding:1px 5px;border-radius:4px;font-size:11px;">payload.exe</code> desde cdn-dl.xyz. La política corporativa bloqueó la solicitud.</div>
+            <div style="font-size:11px;color:var(--text3);font-family:var(--mono);">Hace 18 min · FortiGuard: Malware · Severidad: CRÍTICA</div>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <button class="btn btn-danger" style="font-size:11px;padding:5px 10px;">Bloquear host</button>
+            <button class="btn btn-ghost" style="font-size:11px;padding:5px 10px;">Ignorar</button>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:16px;border-left:3px solid var(--amber);">
+        <div style="display:flex;align-items:flex-start;gap:14px;">
+          <div style="width:36px;height:36px;background:var(--amber2);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <svg width="18" height="18" fill="none" stroke="#d29922" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          </div>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:500;margin-bottom:4px;">Cuota de tiempo casi agotada — Juegos en línea</div>
+            <div style="font-size:12px;color:var(--text2);margin-bottom:8px;">47 usuarios han consumido 19 de los 20 minutos diarios permitidos para la categoría <strong>Juegos en línea</strong>.</div>
+            <div style="font-size:11px;color:var(--text3);font-family:var(--mono);">Hace 11 min · Cuota temporal · Severidad: MEDIA</div>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <button class="btn btn-primary" style="font-size:11px;padding:5px 10px;">Ampliar cuota</button>
+            <button class="btn btn-ghost" style="font-size:11px;padding:5px 10px;">Ignorar</button>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="border-left:3px solid var(--accent2);">
+        <div style="display:flex;align-items:flex-start;gap:14px;">
+          <div style="width:36px;height:36px;background:rgba(31,111,235,0.12);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <svg width="18" height="18" fill="none" stroke="#388bfd" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          </div>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:500;margin-bottom:4px;">Actualización de base de datos FortiGuard disponible</div>
+            <div style="font-size:12px;color:var(--text2);margin-bottom:8px;">Nueva versión v17.44.0 disponible. Se recomienda actualizar para protección contra amenazas emergentes.</div>
+            <div style="font-size:11px;color:var(--text3);font-family:var(--mono);">Hace 2 h · FortiGuard · Severidad: BAJA</div>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <button class="btn btn-primary" style="font-size:11px;padding:5px 10px;">Actualizar ahora</button>
+            <button class="btn btn-ghost" style="font-size:11px;padding:5px 10px;">Posponer</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ PAGE: POLÍTICAS ════ -->
+    <div class="page" id="page-politicas">
+      <div class="page-header">
+        <div><h1>Políticas de filtrado</h1><p>Gestión de reglas de control de acceso web</p></div>
+        <button class="btn btn-primary">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="13" height="13"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Nueva política
+        </button>
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Nombre</th><th>Alcance</th><th>Usuarios</th><th>Acción</th><th>Categorías</th><th>Estado</th><th>Acciones</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Política corporativa general</td>
+                <td style="color:var(--text2);">Todos los segmentos</td>
+                <td style="font-family:var(--mono);">312</td>
+                <td><span class="badge badge-block">Bloquear</span></td>
+                <td style="font-family:var(--mono);">22</td>
+                <td><span class="badge badge-allow">Activa</span></td>
+                <td><button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;">Editar</button></td>
+              </tr>
+              <tr>
+                <td>Restricción BYOD</td>
+                <td style="color:var(--text2);">VLAN Invitados</td>
+                <td style="font-family:var(--mono);">88</td>
+                <td><span class="badge badge-block">Bloquear</span></td>
+                <td style="font-family:var(--mono);">35</td>
+                <td><span class="badge badge-allow">Activa</span></td>
+                <td><button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;">Editar</button></td>
+              </tr>
+              <tr>
+                <td>Acceso IT / Admins</td>
+                <td style="color:var(--text2);">Seg. administración</td>
+                <td style="font-family:var(--mono);">18</td>
+                <td><span class="badge badge-monitor">Monitor</span></td>
+                <td style="font-family:var(--mono);">8</td>
+                <td><span class="badge badge-allow">Activa</span></td>
+                <td><button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;">Editar</button></td>
+              </tr>
+              <tr>
+                <td>Cuotas redes sociales</td>
+                <td style="color:var(--text2);">Segmento general</td>
+                <td style="font-family:var(--mono);">290</td>
+                <td><span class="badge badge-warn">Cuota</span></td>
+                <td style="font-family:var(--mono);">5</td>
+                <td><span class="badge badge-allow">Activa</span></td>
+                <td><button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;">Editar</button></td>
+              </tr>
+              <tr>
+                <td>Lista blanca corporativa</td>
+                <td style="color:var(--text2);">Todos</td>
+                <td style="font-family:var(--mono);">342</td>
+                <td><span class="badge badge-allow">Permitir</span></td>
+                <td style="font-family:var(--mono);">47 URLs</td>
+                <td><span class="badge badge-allow">Activa</span></td>
+                <td><button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;">Editar</button></td>
+              </tr>
+              <tr>
+                <td>Política de prueba</td>
+                <td style="color:var(--text2);">VLAN Test</td>
+                <td style="font-family:var(--mono);">5</td>
+                <td><span class="badge badge-monitor">Monitor</span></td>
+                <td style="font-family:var(--mono);">12</td>
+                <td><span class="badge" style="background:var(--bg3);color:var(--text3);border:1px solid var(--border);">Inactiva</span></td>
+                <td><button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;">Editar</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ PAGE: CATEGORÍAS ════ -->
+    <div class="page" id="page-categorias">
+      <div class="page-header">
+        <div><h1>Categorías FortiGuard</h1><p>Control de 90 categorías de contenido web</p></div>
+      </div>
+      <div class="grid-3">
+        <div class="card">
+          <div class="card-title" style="color:var(--red);">Seguridad</div>
+          <div class="stat-row"><span class="stat-k">Malware</span><span class="badge badge-block">Bloquear</span></div>
+          <div class="stat-row"><span class="stat-k">Phishing</span><span class="badge badge-block">Bloquear</span></div>
+          <div class="stat-row"><span class="stat-k">C&C / Botnet</span><span class="badge badge-block">Bloquear</span></div>
+          <div class="stat-row"><span class="stat-k">Spam URLs</span><span class="badge badge-block">Bloquear</span></div>
+          <div class="stat-row"><span class="stat-k">Drive-by exploit</span><span class="badge badge-block">Bloquear</span></div>
+        </div>
+        <div class="card">
+          <div class="card-title" style="color:var(--amber);">Productividad</div>
+          <div class="stat-row"><span class="stat-k">Redes sociales</span><span class="badge badge-warn">Cuota 30m</span></div>
+          <div class="stat-row"><span class="stat-k">Streaming video</span><span class="badge badge-warn">Cuota 60m</span></div>
+          <div class="stat-row"><span class="stat-k">Juegos en línea</span><span class="badge badge-warn">Cuota 20m</span></div>
+          <div class="stat-row"><span class="stat-k">Foros / Blogs</span><span class="badge badge-monitor">Monitor</span></div>
+          <div class="stat-row"><span class="stat-k">Compras online</span><span class="badge badge-allow">Permitir</span></div>
+        </div>
+        <div class="card">
+          <div class="card-title" style="color:var(--accent2);">Legal / Cumplimiento</div>
+          <div class="stat-row"><span class="stat-k">Adultos</span><span class="badge badge-block">Bloquear</span></div>
+          <div class="stat-row"><span class="stat-k">Violencia</span><span class="badge badge-block">Bloquear</span></div>
+          <div class="stat-row"><span class="stat-k">Drogas / Alcohol</span><span class="badge badge-block">Bloquear</span></div>
+          <div class="stat-row"><span class="stat-k">Juego / Apuestas</span><span class="badge badge-block">Bloquear</span></div>
+          <div class="stat-row"><span class="stat-k">Proxy / VPN</span><span class="badge badge-block">Bloquear</span></div>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">Aplicaciones y tecnología</div>
+          <div class="stat-row"><span class="stat-k">Herramientas IT</span><span class="badge badge-allow">Permitir</span></div>
+          <div class="stat-row"><span class="stat-k">Software / OS</span><span class="badge badge-allow">Permitir</span></div>
+          <div class="stat-row"><span class="stat-k">Repositorios código</span><span class="badge badge-allow">Permitir</span></div>
+          <div class="stat-row"><span class="stat-k">P2P / Torrent</span><span class="badge badge-block">Bloquear</span></div>
+          <div class="stat-row"><span class="stat-k">Almac. en la nube</span><span class="badge badge-monitor">Monitor</span></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Noticias y educación</div>
+          <div class="stat-row"><span class="stat-k">Noticias</span><span class="badge badge-allow">Permitir</span></div>
+          <div class="stat-row"><span class="stat-k">Educación</span><span class="badge badge-allow">Permitir</span></div>
+          <div class="stat-row"><span class="stat-k">Finanzas</span><span class="badge badge-allow">Permitir</span></div>
+          <div class="stat-row"><span class="stat-k">Salud</span><span class="badge badge-allow">Permitir</span></div>
+          <div class="stat-row"><span class="stat-k">Gobierno</span><span class="badge badge-allow">Permitir</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ PAGE: LISTAS URL ════ -->
+    <div class="page" id="page-listas">
+      <div class="page-header">
+        <div><h1>Listas de URL</h1><p>Listas blancas y negras personalizadas</p></div>
+        <button class="btn btn-primary">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="13" height="13"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Añadir URL
+        </button>
+      </div>
+      <div class="grid-2" style="margin-bottom:16px;">
+        <div class="card">
+          <div class="card-title" style="color:var(--green);">Lista blanca (47 entradas)</div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>URL / Patrón</th><th>Añadida por</th><th>Fecha</th><th></th></tr></thead>
+              <tbody>
+                <tr><td>*.empresa.com</td><td style="color:var(--text2);">admin</td><td style="font-family:var(--mono);color:var(--text3);">2024-01-10</td><td><button class="btn btn-ghost" style="font-size:10px;padding:3px 8px;">Eliminar</button></td></tr>
+                <tr><td>teams.microsoft.com</td><td style="color:var(--text2);">admin</td><td style="font-family:var(--mono);color:var(--text3);">2025-04-28</td><td><button class="btn btn-ghost" style="font-size:10px;padding:3px 8px;">Eliminar</button></td></tr>
+                <tr><td>*.office365.com</td><td style="color:var(--text2);">admin</td><td style="font-family:var(--mono);color:var(--text3);">2024-03-15</td><td><button class="btn btn-ghost" style="font-size:10px;padding:3px 8px;">Eliminar</button></td></tr>
+                <tr><td>github.com</td><td style="color:var(--text2);">jlopez</td><td style="font-family:var(--mono);color:var(--text3);">2024-11-02</td><td><button class="btn btn-ghost" style="font-size:10px;padding:3px 8px;">Eliminar</button></td></tr>
+                <tr><td>zoom.us</td><td style="color:var(--text2);">admin</td><td style="font-family:var(--mono);color:var(--text3);">2024-06-20</td><td><button class="btn btn-ghost" style="font-size:10px;padding:3px 8px;">Eliminar</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title" style="color:var(--red);">Lista negra (23 entradas)</div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>URL / Patrón</th><th>Motivo</th><th>Fecha</th><th></th></tr></thead>
+              <tbody>
+                <tr><td>phish-login.ru</td><td><span class="badge badge-block">Phishing</span></td><td style="font-family:var(--mono);color:var(--text3);">2025-05-04</td><td><button class="btn btn-ghost" style="font-size:10px;padding:3px 8px;">Eliminar</button></td></tr>
+                <tr><td>cdn-dl.xyz</td><td><span class="badge badge-block">Malware</span></td><td style="font-family:var(--mono);color:var(--text3);">2025-05-04</td><td><button class="btn btn-ghost" style="font-size:10px;padding:3px 8px;">Eliminar</button></td></tr>
+                <tr><td>torrent-hd.net</td><td><span class="badge badge-block">P2P</span></td><td style="font-family:var(--mono);color:var(--text3);">2025-03-18</td><td><button class="btn btn-ghost" style="font-size:10px;padding:3px 8px;">Eliminar</button></td></tr>
+                <tr><td>casino-online.io</td><td><span class="badge badge-block">Juegos</span></td><td style="font-family:var(--mono);color:var(--text3);">2025-01-09</td><td><button class="btn btn-ghost" style="font-size:10px;padding:3px 8px;">Eliminar</button></td></tr>
+                <tr><td>vpn-bypass.co</td><td><span class="badge badge-block">Proxy</span></td><td style="font-family:var(--mono);color:var(--text3);">2024-12-14</td><td><button class="btn btn-ghost" style="font-size:10px;padding:3px 8px;">Eliminar</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ PAGE: CUOTAS ════ -->
+    <div class="page" id="page-cuotas">
+      <div class="page-header">
+        <div><h1>Cuotas de tiempo</h1><p>Límites diarios de navegación por categoría</p></div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">Consumo de cuotas hoy</div>
+          <div class="quota-row"><span class="quota-label">Redes sociales</span><div class="quota-track"><div class="quota-fill" style="width:78%;background:#388bfd;"></div></div><span class="quota-val">23 / 30 min</span></div>
+          <div class="quota-row"><span class="quota-label">Streaming</span><div class="quota-track"><div class="quota-fill" style="width:55%;background:#3fb950;"></div></div><span class="quota-val">33 / 60 min</span></div>
+          <div class="quota-row"><span class="quota-label">Juegos</span><div class="quota-track"><div class="quota-fill" style="width:98%;background:#f85149;"></div></div><span class="quota-val">19 / 20 min</span></div>
+          <div class="quota-row"><span class="quota-label">Foros</span><div class="quota-track"><div class="quota-fill" style="width:30%;background:#a371f7;"></div></div><span class="quota-val">9 / 30 min</span></div>
+          <div class="quota-row"><span class="quota-label">Noticias</span><div class="quota-track"><div class="quota-fill" style="width:20%;background:#6e7681;"></div></div><span class="quota-val">6 / 30 min</span></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Configurar cuotas</div>
+          <div class="form-group">
+            <label class="form-label">Categoría</label>
+            <select class="form-select">
+              <option>Redes sociales</option>
+              <option>Streaming</option>
+              <option>Juegos en línea</option>
+              <option>Foros / Blogs</option>
+              <option>Noticias</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Límite diario (minutos)</label>
+            <input type="number" class="form-input" value="30" min="5" max="480">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Aplicar a grupo</label>
+            <select class="form-select">
+              <option>Todos los usuarios</option>
+              <option>Segmento general</option>
+              <option>VLAN Invitados</option>
+              <option>Administración</option>
+            </select>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:4px;">
+            <button class="btn btn-primary">Guardar cuota</button>
+            <button class="btn btn-ghost">Cancelar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ PAGE: FORTIGUARD ════ -->
+    <div class="page" id="page-fortiguard">
+      <div class="page-header">
+        <div><h1>Base de datos FortiGuard</h1><p>Estado del servicio de inteligencia de amenazas</p></div>
+        <button class="btn btn-primary">Actualizar ahora</button>
+      </div>
+      <div class="metrics-row">
+        <div class="metric m-green">
+          <div class="metric-bar"></div><div class="metric-label">Versión actual</div><div class="metric-val" style="font-size:18px;">v17.43.2</div><div class="metric-delta"><span class="delta-up">●</span> Al día</div></div>
+        <div class="metric m-blue">
+          <div class="metric-bar"></div><div class="metric-label">Categorías activas</div><div class="metric-val">90</div><div class="metric-delta">de 90 disponibles</div></div>
+        <div class="metric m-amber">
+          <div class="metric-bar"></div><div class="metric-label">URLs en caché</div><div class="metric-val">124K</div><div class="metric-delta">en DNS local</div></div>
+        <div class="metric m-green">
+          <div class="metric-bar"></div><div class="metric-label">Licencia</div><div class="metric-val" style="font-size:18px;">248 días</div><div class="metric-delta"><span class="delta-up">●</span> Vigente</div></div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">Estado del servicio</div>
+          <div class="stat-row"><span class="stat-k">Última sincronización</span><span class="stat-v">hace 12 min</span></div>
+          <div class="stat-row"><span class="stat-k">Servidor FortiGuard</span><span class="stat-v">service.fortiguard.net</span></div>
+          <div class="stat-row"><span class="stat-k">Modo de inspección</span><span class="stat-v">HTTPS deep scan</span></div>
+          <div class="stat-row"><span class="stat-k">SafeSearch</span><span class="stat-v" style="color:var(--green);">Activo</span></div>
+          <div class="stat-row"><span class="stat-k">YouTube for Schools</span><span class="stat-v" style="color:var(--green);">Activo</span></div>
+          <div class="stat-row"><span class="stat-k">Override autenticado</span><span class="stat-v" style="color:var(--green);">Habilitado</span></div>
+          <div class="stat-row"><span class="stat-k">Intervalo de actualiz.</span><span class="stat-v">Cada 30 min</span></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Configuración de inspección</div>
+          <div style="margin-bottom:14px;">
+            <div class="toggle-wrap" style="margin-bottom:10px;"><label class="switch"><input type="checkbox" checked><span class="slider"></span></label><span class="toggle-label">Inspección SSL/HTTPS activa</span></div>
+            <div class="toggle-wrap" style="margin-bottom:10px;"><label class="switch"><input type="checkbox" checked><span class="slider"></span></label><span class="toggle-label">Bloqueo de certificados inválidos</span></div>
+            <div class="toggle-wrap" style="margin-bottom:10px;"><label class="switch"><input type="checkbox" checked><span class="slider"></span></label><span class="toggle-label">Filtrado DNS-over-HTTPS</span></div>
+            <div class="toggle-wrap" style="margin-bottom:10px;"><label class="switch"><input type="checkbox"><span class="slider"></span></label><span class="toggle-label">Modo solo auditoría (sin bloqueo)</span></div>
+            <div class="toggle-wrap"><label class="switch"><input type="checkbox" checked><span class="slider"></span></label><span class="toggle-label">Registro de URLs visitadas</span></div>
+          </div>
+          <button class="btn btn-primary" style="margin-top:4px;">Aplicar cambios</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ PAGE: AJUSTES ════ -->
+    <div class="page" id="page-ajustes">
+      <div class="page-header">
+        <div><h1>Ajustes del sistema</h1><p>Configuración general del módulo de filtrado web</p></div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">Información del dispositivo</div>
+          <div class="stat-row"><span class="stat-k">Modelo</span><span class="stat-v">FortiGate 200F</span></div>
+          <div class="stat-row"><span class="stat-k">FortiOS</span><span class="stat-v">7.4.3 build 2573</span></div>
+          <div class="stat-row"><span class="stat-k">Número de serie</span><span class="stat-v">FG200F3G18123456</span></div>
+          <div class="stat-row"><span class="stat-k">Interfaces activas</span><span class="stat-v">8 de 10</span></div>
+          <div class="stat-row"><span class="stat-k">Uptime</span><span class="stat-v">47 días 12 h 34 min</span></div>
+          <div class="stat-row"><span class="stat-k">CPU</span><span class="stat-v">23%</span></div>
+          <div class="stat-row"><span class="stat-k">Memoria</span><span class="stat-v">4.2 / 16 GB</span></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Notificaciones y alertas</div>
+          <div style="margin-bottom:14px;">
+            <div class="toggle-wrap" style="margin-bottom:10px;"><label class="switch"><input type="checkbox" checked><span class="slider"></span></label><span class="toggle-label">Alertas por correo electrónico</span></div>
+            <div class="toggle-wrap" style="margin-bottom:10px;"><label class="switch"><input type="checkbox" checked><span class="slider"></span></label><span class="toggle-label">Alertas críticas de malware</span></div>
+            <div class="toggle-wrap" style="margin-bottom:10px;"><label class="switch"><input type="checkbox"><span class="slider"></span></label><span class="toggle-label">Resumen diario por email</span></div>
+            <div class="toggle-wrap" style="margin-bottom:10px;"><label class="switch"><input type="checkbox" checked><span class="slider"></span></label><span class="toggle-label">Notificar al usuario bloqueado</span></div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email de notificaciones</label>
+            <input type="email" class="form-input" value="soc@empresa.com">
+          </div>
+          <button class="btn btn-primary">Guardar ajustes</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<script>
+  // ─── NAVEGACIÓN ───
+  const navItems = document.querySelectorAll('.nav-item[data-page]');
+  const pages = document.querySelectorAll('.page');
+  const topbarTitle = document.getElementById('topbar-title');
+  const titles = {
+    dashboard:'Dashboard', trafico:'Tráfico Web', alertas:'Alertas',
+    politicas:'Políticas', categorias:'Categorías', listas:'Listas URL',
+    cuotas:'Cuotas', fortiguard:'FortiGuard DB', ajustes:'Ajustes'
+  };
+
+  navItems.forEach(item => {
+    item.addEventListener('click', () => {
+      const target = item.dataset.page;
+      navItems.forEach(n => n.classList.remove('active'));
+      item.classList.add('active');
+      pages.forEach(p => p.classList.remove('active'));
+      document.getElementById('page-' + target).classList.add('active');
+      topbarTitle.textContent = titles[target] || '';
+    });
+  });
+
+  // ─── TOGGLE SIDEBAR ───
+  document.getElementById('toggle-btn').addEventListener('click', () => {
+    document.getElementById('sidebar').classList.toggle('collapsed');
+  });
+
+  // ─── REFRESH BUTTON ───
+  document.getElementById('refresh-btn').addEventListener('click', function() {
+    this.style.opacity = '0.5';
+    setTimeout(() => { this.style.opacity = '1'; }, 800);
+  });
+
+  // ─── CHART: TRÁFICO POR HORA (Dashboard) ───
+  const hours = ['00','02','04','06','08','10','12','14','16','18','20','22'];
+  const allowed = [1200,800,600,900,4200,8800,9100,8600,7200,5100,3400,2100];
+  const blocked = [80,40,30,60,320,710,840,780,620,410,280,190];
+
+  new Chart(document.getElementById('chartTrafico'), {
+    type: 'bar',
+    data: {
+      labels: hours,
+      datasets: [
+        { label: 'Permitidas', data: allowed, backgroundColor: 'rgba(56,139,253,0.2)', borderColor: '#388bfd', borderWidth: 1 },
+        { label: 'Bloqueadas', data: blocked, backgroundColor: 'rgba(248,81,73,0.25)', borderColor: '#f85149', borderWidth: 1 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: 'rgba(48,54,61,0.5)' }, ticks: { font: { size: 10, family: "'IBM Plex Mono'" }, color: '#6e7681' } },
+        y: { grid: { color: 'rgba(48,54,61,0.5)' }, ticks: { font: { size: 10, family: "'IBM Plex Mono'" }, color: '#6e7681', callback: v => v >= 1000 ? (v/1000).toFixed(0)+'k' : v } }
+      }
+    }
+  });
+
+  // ─── CHART: DONUT ───
+  new Chart(document.getElementById('chartDonut'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Permitidas','Bloqueadas','Advertencias'],
+      datasets: [{ data: [92,7,1], backgroundColor: ['#3fb950','#f85149','#d29922'], borderWidth: 0, hoverOffset: 3 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, cutout: '70%',
+      plugins: { legend: { display: false }, tooltip: { bodyFont: { family: "'IBM Plex Mono'" } } }
+    }
+  });
+
+  // ─── CHART: TRÁFICO 24H (página Tráfico) ───
+  const hours24 = Array.from({length:24}, (_,i) => i.toString().padStart(2,'0')+'h');
+  const data24 = [900,600,400,300,250,400,1200,3800,7200,8800,8100,8600,7900,7200,6800,7100,6400,5200,4800,4100,3200,2400,1800,1200];
+  const block24 = data24.map(v => Math.round(v * 0.07));
+
+  new Chart(document.getElementById('chartTrafico24'), {
+    type: 'line',
+    data: {
+      labels: hours24,
+      datasets: [
+        { label: 'Permitidas', data: data24, borderColor: '#388bfd', backgroundColor: 'rgba(56,139,253,0.08)', fill: true, tension: 0.4, pointRadius: 0, borderWidth: 2 },
+        { label: 'Bloqueadas', data: block24, borderColor: '#f85149', backgroundColor: 'rgba(248,81,73,0.08)', fill: true, tension: 0.4, pointRadius: 0, borderWidth: 2 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: 'rgba(48,54,61,0.5)' }, ticks: { font: { size: 10, family: "'IBM Plex Mono'" }, color: '#6e7681', maxTicksLimit: 12 } },
+        y: { grid: { color: 'rgba(48,54,61,0.5)' }, ticks: { font: { size: 10, family: "'IBM Plex Mono'" }, color: '#6e7681', callback: v => v >= 1000 ? (v/1000).toFixed(0)+'k' : v } }
+      }
+    }
+  });
+</script>
+</body>
+</html>
