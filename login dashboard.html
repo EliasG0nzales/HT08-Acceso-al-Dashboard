@@ -895,9 +895,132 @@
     font-size: 12px;
     line-height: 1.45;
   }
+  .simulation-panel {
+    margin-bottom: 20px;
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(260px, 0.65fr);
+    gap: 12px;
+  }
+  .simulation-card {
+    background: var(--bg2);
+    border: 1px solid rgba(0,255,132,0.2);
+    border-radius: var(--radius-lg);
+    padding: 14px;
+    min-width: 0;
+  }
+  .simulation-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 12px;
+  }
+  .simulation-chip {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--accent2);
+    background: rgba(0,255,132,0.08);
+    border: 1px solid rgba(0,255,132,0.18);
+    border-radius: 999px;
+    padding: 3px 8px;
+    white-space: nowrap;
+  }
+  .simulation-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .simulation-metric {
+    background: rgba(0,0,0,0.22);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: var(--radius);
+    padding: 10px;
+    min-width: 0;
+  }
+  .simulation-label {
+    color: var(--text3);
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 5px;
+  }
+  .simulation-value {
+    color: var(--text);
+    font-size: 17px;
+    font-weight: 700;
+  }
+  .simulation-bar {
+    height: 7px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .simulation-bar span {
+    display: block;
+    height: 100%;
+    width: 55%;
+    background: linear-gradient(90deg, var(--accent), var(--amber));
+    transition: width var(--trans);
+  }
+  .simulation-feed {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 172px;
+    overflow: auto;
+    padding-right: 2px;
+  }
+  .simulation-event {
+    display: grid;
+    grid-template-columns: 9px minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: center;
+    color: var(--text2);
+    font-size: 11px;
+    line-height: 1.35;
+  }
+  .simulation-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent2);
+    box-shadow: 0 0 12px rgba(0,255,132,0.45);
+  }
+  .simulation-time {
+    color: var(--text3);
+    font-family: var(--mono);
+    font-size: 10px;
+    white-space: nowrap;
+  }
+  .simulation-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+  }
+  .simulation-pulse {
+    animation: simulationPulse 0.65s ease;
+  }
+  .change-synced {
+    outline: 1px solid rgba(0,255,132,0.32);
+    box-shadow: 0 0 0 3px rgba(0,255,132,0.08);
+  }
+  @keyframes simulationPulse {
+    0% { transform: translateY(0); box-shadow: 0 0 0 rgba(0,255,132,0); }
+    45% { transform: translateY(-2px); box-shadow: 0 0 24px rgba(0,255,132,0.16); }
+    100% { transform: translateY(0); box-shadow: 0 0 0 rgba(0,255,132,0); }
+  }
   @media (max-width: 760px) {
     .module-insight-actions { grid-template-columns: 1fr; }
     .module-insight-head { align-items: flex-start; flex-direction: column; }
+    .simulation-panel { grid-template-columns: 1fr; }
+    .simulation-metrics { grid-template-columns: 1fr; }
   }
 
   /* ── USER CARD ── */
@@ -2197,6 +2320,243 @@
 
   Object.keys(moduleInsights).forEach(buildModuleInsight);
 
+  const SIM_STORAGE_KEY = 'fortigateSimulationState';
+  const simulationState = loadSimulationState();
+
+  function loadSimulationState() {
+    try {
+      return JSON.parse(localStorage.getItem(SIM_STORAGE_KEY) || '{}') || {};
+    } catch (_) {
+      return {};
+    }
+  }
+
+  function saveSimulationState() {
+    localStorage.setItem(SIM_STORAGE_KEY, JSON.stringify(simulationState));
+  }
+
+  function baseSimulationState(target) {
+    const seed = target.split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+    return {
+      traffic: 700 + (seed % 380),
+      blocked: 24 + (seed % 45),
+      changes: 0,
+      sync: 68 + (seed % 24),
+      events: [
+        { text: 'Simulación inicial cargada para ' + (titles[target] || target), time: 'inicio' },
+        { text: 'Políticas y métricas listas para pruebas visuales', time: 'demo' }
+      ]
+    };
+  }
+
+  function getSimulation(target) {
+    if (!simulationState[target]) simulationState[target] = baseSimulationState(target);
+    return simulationState[target];
+  }
+
+  function buildSimulationPanel(target) {
+    const page = document.getElementById('page-' + target);
+    if (!page || page.querySelector('.simulation-panel')) return;
+    const sim = getSimulation(target);
+    const panel = document.createElement('div');
+    panel.className = 'simulation-panel';
+    panel.innerHTML = `
+      <div class="simulation-card">
+        <div class="simulation-title">
+          <span>Simulación activa del panel</span>
+          <span class="simulation-chip" data-sim-status="${target}">Cambios sincronizados</span>
+        </div>
+        <div class="simulation-metrics">
+          <div class="simulation-metric">
+            <div class="simulation-label">Solicitudes</div>
+            <div class="simulation-value" data-sim-traffic="${target}">${sim.traffic.toLocaleString('es-PE')}</div>
+          </div>
+          <div class="simulation-metric">
+            <div class="simulation-label">Bloqueos</div>
+            <div class="simulation-value" data-sim-blocked="${target}">${sim.blocked}</div>
+          </div>
+          <div class="simulation-metric">
+            <div class="simulation-label">Cambios subidos</div>
+            <div class="simulation-value" data-sim-changes="${target}">${sim.changes}</div>
+          </div>
+        </div>
+        <div class="simulation-bar"><span data-sim-bar="${target}" style="width:${sim.sync}%;"></span></div>
+        <div class="simulation-actions">
+          <button class="btn btn-primary" data-sim-action="traffic" data-page-target="${target}">Simular tráfico</button>
+          <button class="btn btn-ghost" data-sim-action="deploy" data-page-target="${target}">Subir cambios</button>
+        </div>
+      </div>
+      <div class="simulation-card">
+        <div class="simulation-title">
+          <span>Bitácora visual</span>
+          <span class="simulation-chip">${titles[target] || target}</span>
+        </div>
+        <div class="simulation-feed" data-sim-feed="${target}"></div>
+      </div>
+    `;
+    const insight = page.querySelector('.module-insight');
+    (insight || page.querySelector('.page-header'))?.insertAdjacentElement('afterend', panel);
+    renderSimulation(target);
+  }
+
+  Object.keys(moduleInsights).forEach(buildSimulationPanel);
+
+  function renderSimulation(target) {
+    const sim = getSimulation(target);
+    const page = document.getElementById('page-' + target);
+    const traffic = page?.querySelector('[data-sim-traffic]');
+    const blockedValue = page?.querySelector('[data-sim-blocked]');
+    const changes = page?.querySelector('[data-sim-changes]');
+    const bar = page?.querySelector('[data-sim-bar]');
+    const status = page?.querySelector('[data-sim-status]');
+    const feed = page?.querySelector('[data-sim-feed]');
+    if (traffic) traffic.textContent = sim.traffic.toLocaleString('es-PE');
+    if (blockedValue) blockedValue.textContent = sim.blocked;
+    if (changes) changes.textContent = sim.changes;
+    if (bar) bar.style.width = Math.min(100, Math.max(8, sim.sync)) + '%';
+    if (status) status.textContent = sim.changes ? 'Cambios aplicados: ' + sim.changes : 'Cambios sincronizados';
+    if (feed) {
+      feed.innerHTML = sim.events.slice(0, 5).map(event => `
+        <div class="simulation-event">
+          <span class="simulation-dot"></span>
+          <span>${event.text}</span>
+          <span class="simulation-time">${event.time}</span>
+        </div>
+      `).join('');
+    }
+  }
+
+  function currentPageKey() {
+    return document.querySelector('.page.active')?.id.replace('page-', '') || 'inicio';
+  }
+
+  function addSimulationEvent(target, text, mode = 'change') {
+    const sim = getSimulation(target);
+    const bump = mode === 'traffic' ? 0 : 1;
+    sim.traffic += 25 + Math.floor(Math.random() * 110);
+    sim.blocked += mode === 'traffic' ? Math.floor(Math.random() * 4) : 1 + Math.floor(Math.random() * 3);
+    sim.changes += bump;
+    sim.sync = Math.min(100, sim.sync + 4 + Math.floor(Math.random() * 9));
+    sim.events.unshift({ text, time: new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false }) });
+    sim.events = sim.events.slice(0, 8);
+    saveSimulationState();
+    renderSimulation(target);
+    pulsePageSimulation(target);
+    updateChartsForSimulation(target);
+    updateVisibleOps(text);
+  }
+
+  function pulsePageSimulation(target) {
+    const panel = document.querySelector('#page-' + target + ' .simulation-panel');
+    if (!panel) return;
+    panel.classList.remove('simulation-pulse');
+    void panel.offsetWidth;
+    panel.classList.add('simulation-pulse');
+  }
+
+  function updateChartsForSimulation(target) {
+    document.querySelectorAll('#page-' + target + ' canvas').forEach(canvas => {
+      const chart = Chart.getChart(canvas);
+      if (!chart) return;
+      chart.data.datasets.forEach(dataset => {
+        if (!Array.isArray(dataset.data)) return;
+        dataset.data = dataset.data.map(value => {
+          const next = Number(value) + Math.round((Math.random() * 12) - 3);
+          return Math.max(0, next);
+        });
+      });
+      chart.update('none');
+    });
+  }
+
+  function updateVisibleOps(text) {
+    const lastSync = document.getElementById('last-sync-value');
+    const blocks = document.getElementById('blocks-per-minute');
+    const service = document.getElementById('service-status-text');
+    if (lastSync) lastSync.innerHTML = 'ahora <span class="ops-note">cambio aplicado</span>';
+    if (blocks) blocks.innerHTML = (40 + Math.floor(Math.random() * 18)) + ' <span class="ops-note">prom. 5 min</span>';
+    if (service) service.textContent = 'Sincronizado';
+    console.info('[FortiGate demo]', text);
+  }
+
+  function pageFromElement(el) {
+    return el.closest('.page')?.id.replace('page-', '') || currentPageKey();
+  }
+
+  function markElementSynced(el) {
+    const box = el.closest('.card, .table-wrap, .simulation-card, tr') || el;
+    box.classList.add('change-synced');
+    setTimeout(() => box.classList.remove('change-synced'), 900);
+  }
+
+  function reflectButtonAction(btn) {
+    const target = pageFromElement(btn);
+    const label = btn.textContent.trim() || 'Acción';
+    const lowered = label.toLowerCase();
+    if (btn.dataset.simAction === 'traffic') {
+      addSimulationEvent(target, 'Tráfico simulado y gráficos recalculados', 'traffic');
+      showToast('Simulación ejecutada', 'El panel ' + (titles[target] || target) + ' actualizó métricas y gráficos.');
+      return;
+    }
+    if (btn.dataset.simAction === 'deploy') {
+      addSimulationEvent(target, 'Cambios subidos al entorno de demostración');
+      showToast('Cambios subidos', 'La simulación reflejó la última configuración.');
+      return;
+    }
+    if (/exportar|filtrar|limpiar|vista previa|login|logs/i.test(label)) return;
+    const actionText = /guardar|aplicar|actualizar|configurar|editar|nuevo|nueva|añadir|ampliar|bloquear|ignorar|posponer|probar|marcar/i.test(lowered)
+      ? label
+      : 'Cambio aplicado';
+    applyVisibleMutation(btn, lowered);
+    markElementSynced(btn);
+    addSimulationEvent(target, actionText + ' reflejado en ' + (titles[target] || target));
+    showToast('Cambio reflejado', actionText + ' se aplicó visualmente en el panel.');
+  }
+
+  function applyVisibleMutation(btn, lowered) {
+    const row = btn.closest('tr');
+    if (lowered.includes('eliminar') && row) {
+      row.remove();
+      return;
+    }
+    if (lowered.includes('editar') && row) {
+      const status = row.querySelector('.badge');
+      const numberCell = Array.from(row.children).find(cell => /^\d/.test(cell.textContent.trim().replace(',', '')));
+      if (status) {
+        status.textContent = status.textContent.includes('Editado') ? 'Activo' : 'Editado';
+        status.className = 'badge badge-warn';
+      }
+      if (numberCell) numberCell.textContent = String((parseInt(numberCell.textContent.replace(/\D/g, ''), 10) || 0) + 1);
+      return;
+    }
+    if (/nuevo|nueva|añadir/.test(lowered)) {
+      const table = btn.closest('.page')?.querySelector('tbody');
+      if (table) {
+        const cols = table.querySelector('tr')?.children.length || 4;
+        const tr = document.createElement('tr');
+        tr.innerHTML = Array.from({ length: cols }, (_, index) => {
+          if (index === 0) return '<td>Simulado-' + String(Date.now()).slice(-4) + '</td>';
+          if (index === cols - 1) return '<td><button class="btn btn-ghost" style="font-size:10px;padding:3px 8px;">Editar</button></td>';
+          return '<td><span class="badge badge-allow">Aplicado</span></td>';
+        }).join('');
+        table.prepend(tr);
+      }
+    }
+  }
+
+  document.addEventListener('click', e => {
+    const btn = e.target.closest('.btn, .topbar-btn');
+    if (!btn || btn.id === 'refresh-btn' || btn.id === 'logs-shortcut') return;
+    reflectButtonAction(btn);
+  });
+
+  document.addEventListener('change', e => {
+    if (!e.target.matches('#dashboard-wrap input, #dashboard-wrap select, #dashboard-wrap textarea')) return;
+    const target = pageFromElement(e.target);
+    markElementSynced(e.target);
+    addSimulationEvent(target, 'Configuración modificada y lista para subir');
+  });
+
   function openPage(target) {
     const page = document.getElementById('page-' + target);
     if (!page) return;
@@ -2206,6 +2566,7 @@
     topbarTitle.textContent = titles[target] || '';
     const status = document.getElementById('service-status-text');
     if (status && moduleInsights[target]) status.textContent = moduleInsights[target].chip;
+    renderSimulation(target);
     setTimeout(() => {
       document.querySelectorAll('canvas').forEach(canvas => Chart.getChart(canvas)?.resize());
     }, 80);
@@ -2594,9 +2955,7 @@
     window.print();
   });
 
-  document.querySelectorAll('#page-alertas .btn, #page-avanzado .btn, #page-fortiguard .btn, #page-ajustes .btn').forEach(btn => {
-    btn.addEventListener('click', () => showToast('Acción registrada', btn.textContent.trim() + ' quedó registrado en auditoría.'));
-  });
+  // Las acciones de los módulos se registran en la capa de simulación global.
 
   // ─── BACKGROUND MUSIC ───
   const bgMusic = document.getElementById('bg-music');
